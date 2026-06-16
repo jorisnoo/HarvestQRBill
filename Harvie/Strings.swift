@@ -342,6 +342,7 @@ enum Strings {
         static let failed = "Failed"
         static let subdomain = "Subdomain"
         static let apiCredentialsHint = "Get your API credentials from Harvest Developer Tools."
+        static let getApiKey = "Get an API key"
 
         // QR Bill
         static let creditorInformation = "Creditor Information"

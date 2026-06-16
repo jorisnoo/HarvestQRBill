@@ -103,6 +103,12 @@ struct HarvestSettings: View {
                 Text(Strings.Settings.apiCredentialsHint)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                if viewModel.harvestCredentials.accessToken.isEmpty {
+                    Link(destination: URL(string: "https://id.getharvest.com/developers")!) {
+                        Label(Strings.Settings.getApiKey, systemImage: "key")
+                    }
+                }
             }
         }
         .formStyle(.grouped)
