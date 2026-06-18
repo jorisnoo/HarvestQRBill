@@ -116,8 +116,11 @@ struct InvoicesListView: View {
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            if !viewModel.canExportWithQRBill {
-                warningBanner
+            VStack(spacing: 0) {
+                InvoiceStateFilterBar(viewModel: viewModel)
+                if !viewModel.canExportWithQRBill {
+                    warningBanner
+                }
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -160,7 +163,7 @@ struct InvoicesListView: View {
                 ContentUnavailableView {
                     Label(Strings.InvoicesList.noInvoices, systemImage: "doc.text")
                 } description: {
-                    Text(Strings.InvoicesList.noInvoicesForState(viewModel.stateFilter?.rawValue ?? ""))
+                    Text(Strings.InvoicesList.noInvoicesDescription)
                 } actions: {
                     Button(Strings.Common.refresh) {
                         viewModel.refresh()
@@ -381,17 +384,6 @@ private struct InvoicesOnChangeModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .onChange(of: viewModel.stateFilter) {
-                guard viewModel.isInitialized else { return }
-
-                if !viewModel.validSortOptions.contains(viewModel.sortOption) {
-                    viewModel.sortOption = .issueDate
-                }
-
-                viewModel.deselectAll()
-                viewModel.loadInvoices()
-                viewModel.debouncedSaveState()
-            }
             .onChange(of: viewModel.sortOption) {
                 guard viewModel.isInitialized else { return }
                 viewModel.clearInvalidSelections()
@@ -545,23 +537,14 @@ struct InvoiceRowView: View {
 struct StateIndicator: View {
     let state: InvoiceState
 
-    private var color: Color {
-        switch state {
-        case .draft: .gray
-        case .open: .orange
-        case .paid: .green
-        case .closed: .blue
-        }
-    }
-
     var body: some View {
         Text(state.displayName)
             .font(.caption2)
             .fontWeight(.medium)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(color.opacity(0.2))
-            .foregroundStyle(color)
+            .background(state.color.opacity(0.2))
+            .foregroundStyle(state.color)
             .clipShape(Capsule())
     }
 }

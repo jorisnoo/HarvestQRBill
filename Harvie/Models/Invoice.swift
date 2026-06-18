@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 struct InvoicesResponse: Codable, Sendable {
     let invoices: [Invoice]
@@ -192,6 +193,15 @@ enum InvoiceState: String, Codable, CaseIterable, Sendable {
 
     var displayName: String {
         rawValue.capitalized
+    }
+
+    var color: Color {
+        switch self {
+        case .draft: .gray
+        case .open: .orange
+        case .paid: .green
+        case .closed: .blue
+        }
     }
 }
 

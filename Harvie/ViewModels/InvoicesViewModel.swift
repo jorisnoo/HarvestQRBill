@@ -28,7 +28,18 @@ final class InvoicesViewModel {
     var isLoading = false
     var isRefreshing = false
     var error: String?
-    var stateFilter: InvoiceState? = .open
+    /// States to show. An empty set means "All" (no state filtering).
+    var selectedStates: Set<InvoiceState> = [.open] {
+        didSet {
+            guard !isBatchUpdating, isInitialized else { return }
+            if !validSortOptions.contains(sortOption) {
+                sortOption = .issueDate
+            }
+            updateSortedInvoices()
+            clearInvalidSelections()
+            debouncedSaveState()
+        }
+    }
     var sortOption: InvoiceSortOption = .issueDate {
         didSet { if !isBatchUpdating { updateSortedInvoices() } }
     }
@@ -57,14 +68,21 @@ final class InvoicesViewModel {
     private(set) var availablePeriods: [Date] = DateFilterPeriod.month.periods()
 
     var validSortOptions: [InvoiceSortOption] {
-        switch stateFilter {
-        case .draft:
-            return [.issueDate]
-        case .open:
-            return [.issueDate, .dueDate]
-        case .paid, .closed, nil:
-            return InvoiceSortOption.allCases
+        guard !selectedStates.isEmpty else { return InvoiceSortOption.allCases }
+
+        let optionsFor: (InvoiceState) -> Set<InvoiceSortOption> = { state in
+            switch state {
+            case .draft: [.issueDate]
+            case .open: [.issueDate, .dueDate]
+            case .paid, .closed: Set(InvoiceSortOption.allCases)
+            }
         }
+
+        let allowed = selectedStates
+            .map(optionsFor)
+            .reduce(Set(InvoiceSortOption.allCases)) { $0.intersection($1) }
+
+        return InvoiceSortOption.allCases.filter { allowed.contains($0) }
     }
 
     // Creditor info and settings for export validation
@@ -174,8 +192,11 @@ final class InvoicesViewModel {
 
         selectedPeriod = settings.lastSelectedPeriod
 
-        if let stateFilterRaw = settings.lastStateFilter {
-            stateFilter = InvoiceState(rawValue: stateFilterRaw)
+        if let savedStates = settings.lastSelectedStates {
+            selectedStates = Set(savedStates.compactMap { InvoiceState(rawValue: $0) })
+        } else if let stateFilterRaw = settings.lastStateFilter {
+            // Migrate the legacy single-state filter ("" meant "All").
+            selectedStates = InvoiceState(rawValue: stateFilterRaw).map { [$0] } ?? []
         }
 
         isBatchUpdating = false
@@ -205,7 +226,7 @@ final class InvoicesViewModel {
         settings.lastSortAscending = sortDirection == .ascending
         settings.lastFilterPeriod = filterPeriod.rawValue
         settings.lastSelectedPeriod = selectedPeriod
-        settings.lastStateFilter = stateFilter?.rawValue
+        settings.lastSelectedStates = selectedStates.map(\.rawValue)
         AppSettingsStorage.save(settings)
     }
 
@@ -225,6 +246,10 @@ final class InvoicesViewModel {
 
     private func updateSortedInvoices() {
         var filtered = invoices
+
+        if !selectedStates.isEmpty {
+            filtered = filtered.filter { selectedStates.contains($0.state) }
+        }
 
         if !searchText.isEmpty {
             filtered = filtered.filter {
@@ -288,9 +313,6 @@ final class InvoicesViewModel {
     private func performLoadInvoices() async {
         error = nil
 
-        // Capture current state filter before any async work
-        let currentStateFilter = stateFilter
-
         #if DEBUG
         // Check for demo mode first
         if appSettings.isDemoMode {
@@ -328,17 +350,9 @@ final class InvoicesViewModel {
 
             try Task.checkCancellation()
 
-            let fetchedInvoices = try await apiService.fetchAllInvoices(
-                credentials: credentials,
-                state: currentStateFilter
-            )
+            let fetchedInvoices = try await apiService.fetchAllInvoices(credentials: credentials)
 
             try Task.checkCancellation()
-
-            // Verify state filter hasn't changed during the request
-            guard stateFilter == currentStateFilter else {
-                return
-            }
 
             invoices = fetchedInvoices
             Analytics.invoicesLoaded(count: fetchedInvoices.count)
@@ -366,14 +380,8 @@ final class InvoicesViewModel {
     #if DEBUG
     private func loadDemoInvoices() {
         hasValidCredentials = true
-        var demoInvoices = DemoDataProvider.invoices
-
-        // Apply state filter if set
-        if let filter = stateFilter {
-            demoInvoices = demoInvoices.filter { $0.state == filter }
-        }
-
-        invoices = demoInvoices
+        // Load all states; updateSortedInvoices applies the client-side state filter.
+        invoices = DemoDataProvider.invoices
         isLoading = false
         isRefreshing = false
     }
@@ -386,16 +394,8 @@ final class InvoicesViewModel {
 
         do {
             let cached = try context.fetch(descriptor)
-
-            // Filter by state if needed
-            let filtered: [CachedInvoice]
-            if let stateFilter {
-                filtered = cached.filter { $0.stateRaw == stateFilter.rawValue }
-            } else {
-                filtered = cached
-            }
-
-            invoices = filtered.map { $0.toInvoice() }
+            // Load all states; updateSortedInvoices applies the client-side state filter.
+            invoices = cached.map { $0.toInvoice() }
         } catch {
             logger.warning("Failed to load from cache: \(error.localizedDescription)")
         }
@@ -436,14 +436,14 @@ final class InvoicesViewModel {
     }
 
     func switchFilterAndSelect(invoiceId: Int, to newState: InvoiceState) {
-        if let current = stateFilter, current != newState {
-            stateFilter = newState
+        // Make sure the invoice stays visible under the active filter, then keep it selected.
+        // No refetch needed: filtering is client-side. Refresh just this invoice to pick up
+        // its new state.
+        if !selectedStates.isEmpty {
+            selectedStates.insert(newState)
         }
-        loadInvoicesTask?.cancel()
-        loadInvoicesTask = Task {
-            await performLoadInvoices()
-            selectedInvoiceIDs = [invoiceId]
-        }
+        selectedInvoiceIDs = [invoiceId]
+        refreshInvoices(ids: [invoiceId])
     }
 
     func refreshCurrentFilter() {
@@ -476,11 +476,8 @@ final class InvoicesViewModel {
         var updatedInvoices = invoices
         for invoice in fetched {
             if let index = updatedInvoices.firstIndex(where: { $0.id == invoice.id }) {
-                if let stateFilter, invoice.state != stateFilter {
-                    updatedInvoices.remove(at: index)
-                } else {
-                    updatedInvoices[index] = invoice
-                }
+                // Update in place; updateSortedInvoices re-applies the client-side state filter.
+                updatedInvoices[index] = invoice
             }
         }
         invoices = updatedInvoices

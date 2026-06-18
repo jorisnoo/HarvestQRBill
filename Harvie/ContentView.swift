@@ -39,15 +39,15 @@ struct ContentView: View {
         Binding(
             get: {
                 switch source.wrappedValue {
-                case .invoices: .invoices(invoicesVM.stateFilter)
+                // Invoice state is owned by the chip bar, not the picker.
+                case .invoices: .invoices(nil)
                 case .estimates: .estimates(estimatesVM.stateFilter)
                 }
             },
             set: { new in
                 switch new {
-                case .invoices(let state):
+                case .invoices:
                     sourceRaw = DocumentSource.invoices.rawValue
-                    invoicesVM.stateFilter = state
                 case .estimates(let state):
                     sourceRaw = DocumentSource.estimates.rawValue
                     estimatesVM.stateFilter = state
@@ -100,17 +100,21 @@ struct ContentView: View {
                             if source.wrappedValue == .invoices {
                                 sortFilterMenu
                             }
-                            statePicker
+                            if estimatesEnabled {
+                                statePicker
+                            }
                         }
 
                         Menu {
                             if source.wrappedValue == .invoices {
                                 sortFilterMenuItems
                             }
-                            Picker("Filter", selection: sidebarSelection) {
-                                statePickerContent
+                            if estimatesEnabled {
+                                Picker("Filter", selection: sidebarSelection) {
+                                    statePickerContent
+                                }
+                                .pickerStyle(.inline)
                             }
-                            .pickerStyle(.inline)
                         } label: {
                             Label(Strings.Common.more, systemImage: "ellipsis.circle")
                         }
@@ -213,21 +217,14 @@ struct ContentView: View {
 
     @ViewBuilder
     private var statePickerContent: some View {
-        Section(Strings.DocumentSource.invoices) {
-            Text(Strings.InvoicesList.stateOpen).tag(SidebarSelection.invoices(.open))
-            Text(Strings.InvoicesList.statePaid).tag(SidebarSelection.invoices(.paid))
-            Text(Strings.InvoicesList.stateDraft).tag(SidebarSelection.invoices(.draft))
-            Text(Strings.InvoicesList.stateClosed).tag(SidebarSelection.invoices(.closed))
-            Text(Strings.InvoicesList.all).tag(SidebarSelection.invoices(nil))
-        }
-        if estimatesEnabled {
-            Section(Strings.DocumentSource.estimates) {
-                Text(Strings.EstimatesList.stateSent).tag(SidebarSelection.estimates(.sent))
-                Text(Strings.EstimatesList.stateAccepted).tag(SidebarSelection.estimates(.accepted))
-                Text(Strings.EstimatesList.stateDraft).tag(SidebarSelection.estimates(.draft))
-                Text(Strings.EstimatesList.stateDeclined).tag(SidebarSelection.estimates(.declined))
-                Text(Strings.EstimatesList.all).tag(SidebarSelection.estimates(nil))
-            }
+        // The picker only switches the document source; invoice state lives in the chip bar.
+        Text(Strings.DocumentSource.invoices).tag(SidebarSelection.invoices(nil))
+        Section(Strings.DocumentSource.estimates) {
+            Text(Strings.EstimatesList.stateSent).tag(SidebarSelection.estimates(.sent))
+            Text(Strings.EstimatesList.stateAccepted).tag(SidebarSelection.estimates(.accepted))
+            Text(Strings.EstimatesList.stateDraft).tag(SidebarSelection.estimates(.draft))
+            Text(Strings.EstimatesList.stateDeclined).tag(SidebarSelection.estimates(.declined))
+            Text(Strings.EstimatesList.all).tag(SidebarSelection.estimates(nil))
         }
     }
 
