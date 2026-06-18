@@ -57,6 +57,7 @@ enum Strings {
         static let statePaid = "Paid"
         static let stateDraft = "Draft"
         static let stateClosed = "Closed"
+        static let stateFilterHint = "Click to filter by state. \u{2318}-click to select several."
         static let exportingInvoices = "Exporting Invoices"
         static let creditorWarning = "Configure creditor info in Settings to enable QR bill export."
 
@@ -67,6 +68,8 @@ enum Strings {
         static func invoiceCount(_ count: Int) -> String {
             "\(count) invoice\(count == 1 ? "" : "s")"
         }
+
+        static let noInvoicesDescription = "No invoices found."
 
         static func noInvoicesForState(_ state: String) -> String {
             "No \(state) invoices found."

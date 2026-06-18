@@ -209,6 +209,7 @@ struct AppSettings: Codable, Sendable, Equatable {
     var lastFilterPeriod: String?
     var lastSelectedPeriod: Date?
     var lastStateFilter: String?
+    var lastSelectedStates: [String]?
 
     static let defaultFilenamePattern = "{date}_{number}_{creditor}"
     static let defaultEmailSubjectPattern = "{invoice} {number} {title}"
@@ -267,6 +268,7 @@ struct AppSettings: Codable, Sendable, Equatable {
         lastFilterPeriod = try container.decodeIfPresent(String.self, forKey: .lastFilterPeriod)
         lastSelectedPeriod = try container.decodeIfPresent(Date.self, forKey: .lastSelectedPeriod)
         lastStateFilter = try container.decodeIfPresent(String.self, forKey: .lastStateFilter)
+        lastSelectedStates = try container.decodeIfPresent([String].self, forKey: .lastSelectedStates)
         labelOverrides = try container.decodeIfPresent([String: [String: String]].self, forKey: .labelOverrides)
     }
 
