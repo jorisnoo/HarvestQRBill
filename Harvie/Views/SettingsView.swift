@@ -126,6 +126,14 @@ struct QRBillSettings: View {
 
     @FocusState private var focusedField: Field?
 
+    private func advanceFocus(_ press: KeyPress) -> KeyPress.Result {
+        guard let current = focusedField else { return .ignored }
+        let offset = press.modifiers.contains(.shift) ? -1 : 1
+        guard let next = Field(rawValue: current.rawValue + offset) else { return .ignored }
+        focusedField = next
+        return .handled
+    }
+
     var body: some View {
         Form {
             Section(Strings.Settings.creditorInformation) {
@@ -192,6 +200,7 @@ struct QRBillSettings: View {
             }
         }
         .formStyle(.grouped)
+        .onKeyPress(keys: [.tab], action: advanceFocus)
     }
 }
 
