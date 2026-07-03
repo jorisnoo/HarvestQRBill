@@ -26,7 +26,7 @@ struct InvoiceStateFilterBar: View {
             ForEach(InvoiceState.allCases, id: \.self) { state in
                 chip(
                     title: title(for: state),
-                    tint: state.color,
+                    tint: state == .draft ? .primary : state.color,
                     isSelected: viewModel.selectedStates.contains(state)
                 ) {
                     select(state)
