@@ -10,6 +10,8 @@
 	<dict>
 		<key>customPDFTemplates</key>
 		<true/>
+		<key>clientOverrides</key>
+		<true/>
 	</dict>
 	<key>GHRepositoryName</key>
 	<string>Harvie</string>
