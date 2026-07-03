@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.0](https://github.com/jorisnoo/Harvie/releases/tag/v0.8.0) (2026-07-03)
+
+### Features
+
+- enable per-client override ([14faaa5](https://github.com/jorisnoo/Harvie/commit/14faaa59f3865a8631112e34d26ff6bd986b870a))
+- **invoices:** multi-state filtering via chip bar ([53f4597](https://github.com/jorisnoo/Harvie/commit/53f459743c5358dbf9646bd0c687a2cba15270cb))
+- **settings:** add Tab navigation between creditor info fields ([b67b20d](https://github.com/jorisnoo/Harvie/commit/b67b20dbfadff370fd2a1dd45a216804f83134b4))
+- **settings:** add API key link when no Harvest token present ([fcb0dd8](https://github.com/jorisnoo/Harvie/commit/fcb0dd88596903b31f8c77be10f88dec38cf1431))
+- allow customizing sent date when marking invoices as sent ([25018b4](https://github.com/jorisnoo/Harvie/commit/25018b4fe7a8a96e137a6f1c712c37cabd58c5df))
+
+### Code Refactoring
+
+- redesign markAsSent sheet with side-by-side date picker layout ([3303a1d](https://github.com/jorisnoo/Harvie/commit/3303a1dbcff3d75bd4f3a6ba917f92868a86b13d))
 ## [0.7.2](https://github.com/jorisnoo/Harvie/releases/tag/v0.7.2) (2026-05-28)
 
 ### Features
