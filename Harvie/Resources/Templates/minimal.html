@@ -35,7 +35,7 @@
             {{#lineItems}}
             <tr>
                 <td class="desc">{{description | markdown}}</td>
-                <td class="qty">{{quantity | number:1}}</td>
+                <td class="qty">{{quantity | numberTrimmed:1}}</td>
                 <td class="price">{{unitPrice | currency}}</td>
                 <td class="total">{{amount | currency}}</td>
             </tr>

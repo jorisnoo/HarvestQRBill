@@ -47,6 +47,21 @@ struct TemplateEngine {
         return formatter
     }
 
+    private static func cachedTrimmedNumberFormatter(digits: Int) -> NumberFormatter {
+        let key = "trimmed-\(digits)" as NSString
+        if let cached = numberFormatters.object(forKey: key) {
+            return cached
+        }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = digits
+        formatter.decimalSeparator = "."
+        formatter.groupingSeparator = "'"
+        numberFormatters.setObject(formatter, forKey: key)
+        return formatter
+    }
+
     enum Token {
         case text(String)
         case variable(String, filter: Filter?)
@@ -60,6 +75,7 @@ struct TemplateEngine {
         case date(String)
         case currency
         case number(Int)
+        case numberTrimmed(Int)
         case markdown
     }
 
@@ -154,6 +170,13 @@ struct TemplateEngine {
             let digits = string.dropFirst(7).trimmingCharacters(in: .whitespaces)
             if let n = Int(digits) {
                 return .number(n)
+            }
+        }
+
+        if string.hasPrefix("numberTrimmed:") {
+            let digits = string.dropFirst(14).trimmingCharacters(in: .whitespaces)
+            if let n = Int(digits) {
+                return .numberTrimmed(n)
             }
         }
 
@@ -309,6 +332,10 @@ struct TemplateEngine {
         case .number(let digits):
             guard let decimal = toDecimal(value) else { return stringify(value) }
             return cachedNumberFormatter(digits: digits).string(from: decimal as NSDecimalNumber) ?? stringify(value)
+
+        case .numberTrimmed(let digits):
+            guard let decimal = toDecimal(value) else { return stringify(value) }
+            return cachedTrimmedNumberFormatter(digits: digits).string(from: decimal as NSDecimalNumber) ?? stringify(value)
 
         case .markdown:
             return convertMarkdown(stringify(value))

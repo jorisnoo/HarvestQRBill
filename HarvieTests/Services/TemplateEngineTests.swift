@@ -135,6 +135,13 @@ struct TemplateEngineTests {
         #expect(result == "42.0")
     }
 
+    @Test func trimmedNumberFilterHidesTrailingZeros() {
+        let whole = TemplateEngine.render("{{qty | numberTrimmed:1}}", with: ["qty": Decimal(42)])
+        let fractional = TemplateEngine.render("{{qty | numberTrimmed:1}}", with: ["qty": Decimal(string: "4.5")!])
+        #expect(whole == "42")
+        #expect(fractional == "4.5")
+    }
+
     @Test func filterOnMissingValue() {
         let result = TemplateEngine.render("{{missing | currency}}", with: [:])
         #expect(result == "")

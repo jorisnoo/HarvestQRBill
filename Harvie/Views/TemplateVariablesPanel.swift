@@ -80,7 +80,7 @@ struct TemplateVariablesPanel: View {
         ("Filters", [
             TemplateVariable(token: "invoice.issueDate | date:\"dd.MM.yyyy\"", label: "Date Format"),
             TemplateVariable(token: "invoice.amount | currency", label: "Currency Format"),
-            TemplateVariable(token: "quantity | number:1", label: "Number Format")
+            TemplateVariable(token: "quantity | numberTrimmed:1", label: "Trimmed Number Format")
         ])
     ]
 

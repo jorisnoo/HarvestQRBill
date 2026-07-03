@@ -129,6 +129,7 @@
 <pre><code>{{invoice.amount | currency}}
 {{invoice.issueDate | date:"dd.MM.yyyy"}}
 {{invoice.tax | number:1}}
+{{quantity | numberTrimmed:1}}
 {{invoice.notes | markdown}}</code></pre>
 
 <h2>Filters Reference</h2>
@@ -149,6 +150,11 @@
     <td><code>number:digits</code></td>
     <td>Formats a decimal with the specified number of decimal places</td>
     <td><code>{{invoice.tax | number:1}}</code> → <code>8.1</code></td>
+  </tr>
+  <tr>
+    <td><code>numberTrimmed:digits</code></td>
+    <td>Formats a decimal with up to the specified number of decimal places, hiding trailing zeros</td>
+    <td><code>{{quantity | numberTrimmed:1}}</code> → <code>4</code> or <code>4.5</code></td>
   </tr>
   <tr>
     <td><code>markdown</code></td>
