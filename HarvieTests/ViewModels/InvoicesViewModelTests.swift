@@ -3,6 +3,7 @@
 //  HarvieTests
 //
 
+import Foundation
 import Testing
 @testable import Harvie
 
@@ -142,10 +143,10 @@ struct EstimatesViewModelTests {
         let vm = EstimatesViewModel()
         vm.selectedStates = [.sent, .accepted]
         vm.estimates = [
-            estimate(id: 1, state: .draft),
-            estimate(id: 2, state: .sent),
-            estimate(id: 3, state: .accepted),
-            estimate(id: 4, state: .declined),
+            Self.estimate(id: 1, state: .draft),
+            Self.estimate(id: 2, state: .sent),
+            Self.estimate(id: 3, state: .accepted),
+            Self.estimate(id: 4, state: .declined),
         ]
 
         #expect(Set(vm.sortedEstimates.map(\.state)) == [.sent, .accepted])
@@ -157,10 +158,10 @@ struct EstimatesViewModelTests {
         let vm = EstimatesViewModel()
         vm.selectedStates = []
         vm.estimates = [
-            estimate(id: 1, state: .draft),
-            estimate(id: 2, state: .sent),
-            estimate(id: 3, state: .accepted),
-            estimate(id: 4, state: .declined),
+            Self.estimate(id: 1, state: .draft),
+            Self.estimate(id: 2, state: .sent),
+            Self.estimate(id: 3, state: .accepted),
+            Self.estimate(id: 4, state: .declined),
         ]
 
         #expect(vm.sortedEstimates.count == EstimateState.allCases.count)
