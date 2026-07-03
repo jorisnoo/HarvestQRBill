@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.1](https://github.com/jorisnoo/Harvie/releases/tag/v0.8.1) (2026-07-03)
+
+### Features
+
+- show override count in client overrides header ([91b7e89](https://github.com/jorisnoo/Harvie/commit/91b7e89bd63fe255a73901ab9b1fdd63e8518f3c))
+- **toolbar:** combine document switching with filters ([c923c86](https://github.com/jorisnoo/Harvie/commit/c923c86d6107f85cc2494ba584774263f4532d9f))
+- **invoices:** support shift-click state selection ([84952bc](https://github.com/jorisnoo/Harvie/commit/84952bc3c314ba0e9688f8c7d77eee2523dde2e1))
+
+### Bug Fixes
+
+- **invoices:** stabilize state filter list layout ([62a0ffe](https://github.com/jorisnoo/Harvie/commit/62a0ffeb5f5406497a732d53af54353d1821d743))
+
+### Tests
+
+- update invoice state tests ([835999f](https://github.com/jorisnoo/Harvie/commit/835999f8061e651d354662e42738699ba0467c60))
+
+### Styles
+
+- **invoices:** use primary color for selected drafts ([1319620](https://github.com/jorisnoo/Harvie/commit/13196202b636f3bf59058d2d8b60784137aa66ee))
 ## [0.8.0](https://github.com/jorisnoo/Harvie/releases/tag/v0.8.0) (2026-07-03)
 
 ### Features
