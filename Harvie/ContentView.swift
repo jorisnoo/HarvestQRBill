@@ -95,30 +95,7 @@ struct ContentView: View {
         .toolbar {
             if columnVisibility != .detailOnly {
                 ToolbarItem(placement: .automatic) {
-                    ViewThatFits(in: .horizontal) {
-                        HStack(spacing: 8) {
-                            if source.wrappedValue == .invoices {
-                                sortFilterMenu
-                            }
-                            if estimatesEnabled {
-                                statePicker
-                            }
-                        }
-
-                        Menu {
-                            if source.wrappedValue == .invoices {
-                                sortFilterMenuItems
-                            }
-                            if estimatesEnabled {
-                                Picker("Filter", selection: sidebarSelection) {
-                                    statePickerContent
-                                }
-                                .pickerStyle(.inline)
-                            }
-                        } label: {
-                            Label(Strings.Common.more, systemImage: "ellipsis.circle")
-                        }
-                    }
+                    sortFilterMenu
                 }
             }
         }
@@ -126,22 +103,26 @@ struct ContentView: View {
 
     private var sortFilterMenu: some View {
         Menu {
-            sortFilterMenuItems
+            if estimatesEnabled {
+                Picker("Document", selection: sidebarSelection) {
+                    statePickerContent
+                }
+                .pickerStyle(.inline)
+
+                Divider()
+            }
+
+            if source.wrappedValue == .invoices {
+                sortFilterMenuItems
+            }
         } label: {
             Label(sortFilterMenuLabel, systemImage: "line.3.horizontal.decrease.circle")
         }
         .focusable(false)
     }
 
-    private var statePicker: some View {
-        Picker("Filter", selection: sidebarSelection) {
-            statePickerContent
-        }
-        .pickerStyle(.menu)
-    }
-
     private var sortFilterMenuLabel: String {
-        if let period = invoicesVM.selectedPeriod {
+        if source.wrappedValue == .invoices, let period = invoicesVM.selectedPeriod {
             return invoicesVM.formatPeriod(period)
         }
         return Strings.InvoicesList.sortAndFilter
@@ -206,7 +187,7 @@ struct ContentView: View {
                 } label: {
                     HStack {
                         Text(invoicesVM.formatPeriod(period))
-                        if let selected = invoicesVM.selectedPeriod, selected == period {
+                        if invoicesVM.selectedPeriod == period {
                             Image(systemName: "checkmark")
                         }
                     }
