@@ -430,6 +430,9 @@ enum Strings {
         static let clients = "Clients"
         static let clientOverrides = "Client Overrides"
         static let addOverride = "Add Override"
+        static func overrideCount(_ count: Int) -> String {
+            count == 1 ? "1 client" : "\(count) clients"
+        }
         static func removeOverride(_ name: String) -> String {
             "Remove Override for \(name)"
         }

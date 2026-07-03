@@ -38,7 +38,7 @@ struct ClientOverridesSettings: View {
 
     var body: some View {
         Form {
-            Section(Strings.Settings.clientOverrides) {
+            Section {
                 if overrides.isEmpty && availableClients.isEmpty {
                     Text(Strings.Settings.noClientsHint)
                         .foregroundStyle(.secondary)
@@ -63,6 +63,15 @@ struct ClientOverridesSettings: View {
                                 addOverride(for: client)
                             }
                         }
+                    }
+                }
+            } header: {
+                HStack {
+                    Text(Strings.Settings.clientOverrides)
+                    if !overrides.isEmpty {
+                        Spacer()
+                        Text(Strings.Settings.overrideCount(overrides.count))
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
