@@ -14,27 +14,28 @@ struct InvoiceStateFilterBar: View {
     @Bindable var viewModel: InvoicesViewModel
 
     var body: some View {
-        HStack(spacing: 6) {
-            chip(
-                title: Strings.InvoicesList.all,
-                tint: .accentColor,
-                isSelected: viewModel.selectedStates.isEmpty
-            ) {
-                viewModel.selectedStates = []
-            }
-
-            ForEach(InvoiceState.allCases, id: \.self) { state in
+        ScrollView(.horizontal) {
+            HStack(spacing: 6) {
                 chip(
-                    title: title(for: state),
-                    tint: state == .draft ? .primary : state.color,
-                    isSelected: viewModel.selectedStates.contains(state)
+                    title: Strings.InvoicesList.all,
+                    tint: .accentColor,
+                    isSelected: viewModel.selectedStates.isEmpty
                 ) {
-                    select(state)
+                    viewModel.selectedStates = []
+                }
+
+                ForEach(InvoiceState.allCases, id: \.self) { state in
+                    chip(
+                        title: title(for: state),
+                        tint: state == .draft ? .primary : state.color,
+                        isSelected: viewModel.selectedStates.contains(state)
+                    ) {
+                        select(state)
+                    }
                 }
             }
-
-            Spacer(minLength: 0)
         }
+        .scrollIndicators(.hidden)
         .padding(.horizontal)
         .padding(.vertical, 6)
         .help(Strings.InvoicesList.stateFilterHint)
@@ -63,6 +64,8 @@ struct InvoiceStateFilterBar: View {
             Text(title)
                 .font(.caption)
                 .fontWeight(.medium)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
                 .background(isSelected ? tint.opacity(0.22) : Color.secondary.opacity(0.12))
@@ -90,27 +93,28 @@ struct EstimateStateFilterBar: View {
     @Bindable var viewModel: EstimatesViewModel
 
     var body: some View {
-        HStack(spacing: 6) {
-            chip(
-                title: Strings.EstimatesList.all,
-                tint: .accentColor,
-                isSelected: viewModel.selectedStates.isEmpty
-            ) {
-                viewModel.selectedStates = []
-            }
-
-            ForEach(EstimateState.allCases, id: \.self) { state in
+        ScrollView(.horizontal) {
+            HStack(spacing: 6) {
                 chip(
-                    title: title(for: state),
-                    tint: tint(for: state),
-                    isSelected: viewModel.selectedStates.contains(state)
+                    title: Strings.EstimatesList.all,
+                    tint: .accentColor,
+                    isSelected: viewModel.selectedStates.isEmpty
                 ) {
-                    select(state)
+                    viewModel.selectedStates = []
+                }
+
+                ForEach(EstimateState.allCases, id: \.self) { state in
+                    chip(
+                        title: title(for: state),
+                        tint: tint(for: state),
+                        isSelected: viewModel.selectedStates.contains(state)
+                    ) {
+                        select(state)
+                    }
                 }
             }
-
-            Spacer(minLength: 0)
         }
+        .scrollIndicators(.hidden)
         .padding(.horizontal)
         .padding(.vertical, 6)
         .help(Strings.EstimatesList.stateFilterHint)
@@ -139,6 +143,8 @@ struct EstimateStateFilterBar: View {
             Text(title)
                 .font(.caption)
                 .fontWeight(.medium)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
                 .background(isSelected ? tint.opacity(0.22) : Color.secondary.opacity(0.12))
