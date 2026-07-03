@@ -236,6 +236,7 @@ enum Strings {
         static let stateAccepted = "Accepted"
         static let stateDeclined = "Declined"
         static let all = "All"
+        static let stateFilterHint = "Click to filter by state. Shift-click or \u{2318}-click to select several."
         static let exportingEstimates = "Exporting Estimates"
 
         static func estimateCount(_ count: Int) -> String {
@@ -245,6 +246,8 @@ enum Strings {
         static func noEstimatesForState(_ state: String) -> String {
             "No \(state) estimates found."
         }
+
+        static let noEstimatesDescription = "No estimates found."
     }
 
     // MARK: - Estimate Detail

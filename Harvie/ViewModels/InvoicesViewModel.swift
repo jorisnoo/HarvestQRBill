@@ -221,13 +221,16 @@ final class InvoicesViewModel {
     }
 
     func saveState() {
-        var settings = appSettings
+        // Merge into the latest persisted settings so another document view cannot
+        // overwrite independently saved preferences with a stale in-memory copy.
+        var settings = AppSettingsStorage.load()
         settings.lastSortOption = sortOption.rawValue
         settings.lastSortAscending = sortDirection == .ascending
         settings.lastFilterPeriod = filterPeriod.rawValue
         settings.lastSelectedPeriod = selectedPeriod
         settings.lastSelectedStates = selectedStates.map(\.rawValue)
         AppSettingsStorage.save(settings)
+        appSettings = settings
     }
 
     private(set) var sortedInvoices: [Invoice] = []

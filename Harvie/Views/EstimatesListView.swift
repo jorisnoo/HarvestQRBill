@@ -11,62 +11,71 @@ struct EstimatesListView: View {
 
     @ViewBuilder
     private var estimatesList: some View {
-        List(selection: $viewModel.selectedEstimateIDs) {
-            ForEach(viewModel.sortedEstimates) { estimate in
-                EstimateRowView(estimate: estimate)
-                    .tag(estimate.id)
+        VStack(spacing: 0) {
+            EstimateStateFilterBar(viewModel: viewModel)
+
+            ScrollViewReader { proxy in
+                List(selection: $viewModel.selectedEstimateIDs) {
+                    ForEach(viewModel.sortedEstimates) { estimate in
+                        EstimateRowView(estimate: estimate)
+                            .tag(estimate.id)
+                    }
+                }
+                .onKeyPress(.escape) {
+                    guard !viewModel.selectedEstimateIDs.isEmpty else { return .ignored }
+                    viewModel.selectedEstimateIDs.removeAll()
+                    return .handled
+                }
+                .contextMenu(forSelectionType: Int.self) { selectedIDs in
+                    if !selectedIDs.isEmpty {
+                        Button {
+                            Task { await viewModel.exportSelectedEstimates() }
+                        } label: {
+                            Label(Strings.EstimatesList.export, systemImage: "square.and.arrow.down")
+                        }
+
+                        Divider()
+
+                        if viewModel.allSelectedAreDrafts {
+                            Button {
+                                Task { await viewModel.markSelectedAsSent() }
+                            } label: {
+                                Label(Strings.EstimatesList.markAsSent, systemImage: "paperplane")
+                            }
+                        }
+
+                        if viewModel.allSelectedAreSent {
+                            Button {
+                                Task { await viewModel.markSelectedAsAccepted() }
+                            } label: {
+                                Label(Strings.EstimatesList.markAsAccepted, systemImage: "checkmark.circle")
+                            }
+                            Button {
+                                Task { await viewModel.markSelectedAsDeclined() }
+                            } label: {
+                                Label(Strings.EstimatesList.markAsDeclined, systemImage: "xmark.circle")
+                            }
+                        }
+
+                        if viewModel.allSelectedAreFinalized {
+                            Button {
+                                Task { await viewModel.reopenSelected() }
+                            } label: {
+                                Label(Strings.EstimatesList.reopen, systemImage: "arrow.uturn.backward")
+                            }
+                        }
+                    }
+                } primaryAction: { selectedIDs in
+                    if let firstID = selectedIDs.first {
+                        viewModel.selectedEstimateIDs = [firstID]
+                    }
+                }
+                .onChange(of: viewModel.selectedStates) {
+                    guard let firstEstimateID = viewModel.sortedEstimates.first?.id else { return }
+                    proxy.scrollTo(firstEstimateID, anchor: .top)
+                }
             }
-        }
-        .onKeyPress(.escape) {
-            guard !viewModel.selectedEstimateIDs.isEmpty else { return .ignored }
-            viewModel.selectedEstimateIDs.removeAll()
-            return .handled
-        }
-        .contextMenu(forSelectionType: Int.self) { selectedIDs in
-            if !selectedIDs.isEmpty {
-                Button {
-                    Task { await viewModel.exportSelectedEstimates() }
-                } label: {
-                    Label(Strings.EstimatesList.export, systemImage: "square.and.arrow.down")
-                }
 
-                Divider()
-
-                if viewModel.allSelectedAreDrafts {
-                    Button {
-                        Task { await viewModel.markSelectedAsSent() }
-                    } label: {
-                        Label(Strings.EstimatesList.markAsSent, systemImage: "paperplane")
-                    }
-                }
-
-                if viewModel.allSelectedAreSent {
-                    Button {
-                        Task { await viewModel.markSelectedAsAccepted() }
-                    } label: {
-                        Label(Strings.EstimatesList.markAsAccepted, systemImage: "checkmark.circle")
-                    }
-                    Button {
-                        Task { await viewModel.markSelectedAsDeclined() }
-                    } label: {
-                        Label(Strings.EstimatesList.markAsDeclined, systemImage: "xmark.circle")
-                    }
-                }
-
-                if viewModel.allSelectedAreFinalized {
-                    Button {
-                        Task { await viewModel.reopenSelected() }
-                    } label: {
-                        Label(Strings.EstimatesList.reopen, systemImage: "arrow.uturn.backward")
-                    }
-                }
-            }
-        } primaryAction: { selectedIDs in
-            if let firstID = selectedIDs.first {
-                viewModel.selectedEstimateIDs = [firstID]
-            }
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
             EstimatesStatusBar(estimates: viewModel.sortedEstimates)
         }
     }
@@ -99,7 +108,7 @@ struct EstimatesListView: View {
                 ContentUnavailableView {
                     Label(Strings.EstimatesList.noEstimates, systemImage: "doc.richtext")
                 } description: {
-                    Text(Strings.EstimatesList.noEstimatesForState(viewModel.stateFilter?.displayName ?? ""))
+                    Text(Strings.EstimatesList.noEstimatesDescription)
                 } actions: {
                     Button(Strings.Common.refresh) { viewModel.refresh() }
                 }
@@ -157,11 +166,6 @@ private struct EstimatesOnChangeModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .onChange(of: viewModel.stateFilter) {
-                guard viewModel.isInitialized else { return }
-                viewModel.deselectAll()
-                viewModel.loadEstimates()
-            }
             .onReceive(NotificationCenter.default.publisher(for: .refreshEstimates)) { _ in
                 viewModel.refresh()
             }

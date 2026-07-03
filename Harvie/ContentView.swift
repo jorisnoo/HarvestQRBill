@@ -13,11 +13,6 @@ extension Notification.Name {
     static let insertTemplateVariable = Notification.Name("InsertTemplateVariable")
 }
 
-enum SidebarSelection: Hashable {
-    case invoices(InvoiceState?)
-    case estimates(EstimateState?)
-}
-
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var invoicesVM = InvoicesViewModel()
@@ -34,27 +29,6 @@ struct ContentView: View {
     }
 
     private var estimatesEnabled: Bool { FeatureFlags.estimates }
-
-    private var sidebarSelection: Binding<SidebarSelection> {
-        Binding(
-            get: {
-                switch source.wrappedValue {
-                // Invoice state is owned by the chip bar, not the picker.
-                case .invoices: .invoices(nil)
-                case .estimates: .estimates(estimatesVM.stateFilter)
-                }
-            },
-            set: { new in
-                switch new {
-                case .invoices:
-                    sourceRaw = DocumentSource.invoices.rawValue
-                case .estimates(let state):
-                    sourceRaw = DocumentSource.estimates.rawValue
-                    estimatesVM.stateFilter = state
-                }
-            }
-        )
-    }
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -104,8 +78,10 @@ struct ContentView: View {
     private var sortFilterMenu: some View {
         Menu {
             if estimatesEnabled {
-                Picker("Document", selection: sidebarSelection) {
-                    statePickerContent
+                Picker("Document", selection: source) {
+                    ForEach(DocumentSource.allCases) { documentSource in
+                        Text(documentSource.displayName).tag(documentSource)
+                    }
                 }
                 .pickerStyle(.inline)
 
@@ -193,19 +169,6 @@ struct ContentView: View {
                     }
                 }
             }
-        }
-    }
-
-    @ViewBuilder
-    private var statePickerContent: some View {
-        // The picker only switches the document source; invoice state lives in the chip bar.
-        Text(Strings.DocumentSource.invoices).tag(SidebarSelection.invoices(nil))
-        Section(Strings.DocumentSource.estimates) {
-            Text(Strings.EstimatesList.stateSent).tag(SidebarSelection.estimates(.sent))
-            Text(Strings.EstimatesList.stateAccepted).tag(SidebarSelection.estimates(.accepted))
-            Text(Strings.EstimatesList.stateDraft).tag(SidebarSelection.estimates(.draft))
-            Text(Strings.EstimatesList.stateDeclined).tag(SidebarSelection.estimates(.declined))
-            Text(Strings.EstimatesList.all).tag(SidebarSelection.estimates(nil))
         }
     }
 

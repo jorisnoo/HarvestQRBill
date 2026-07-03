@@ -28,7 +28,15 @@ final class EstimatesViewModel {
     var isLoading = false
     var isRefreshing = false
     var error: String?
-    var stateFilter: EstimateState? = .sent
+    /// States to show. An empty set means "All" (no state filtering).
+    var selectedStates: Set<EstimateState> = [.sent] {
+        didSet {
+            guard !isBatchUpdating, isInitialized else { return }
+            updateSortedEstimates()
+            clearInvalidSelections()
+            debouncedSaveState()
+        }
+    }
     var sortDirection: SortDirection = .descending {
         didSet { if !isBatchUpdating { updateSortedEstimates() } }
     }
@@ -40,6 +48,7 @@ final class EstimatesViewModel {
 
     @ObservationIgnored private var isBatchUpdating = false
     @ObservationIgnored private var loadTask: Task<Void, Never>?
+    @ObservationIgnored private var saveStateTask: Task<Void, Never>?
 
     var creditorInfo: CreditorInfo = .empty
     var appSettings: AppSettings = .default
@@ -93,6 +102,13 @@ final class EstimatesViewModel {
             creditorInfo = loadedCreditorInfo
         }
         appSettings = AppSettingsStorage.load()
+
+        isBatchUpdating = true
+        if let savedStates = appSettings.lastSelectedEstimateStates {
+            selectedStates = Set(savedStates.compactMap { EstimateState(rawValue: $0) })
+        }
+        isBatchUpdating = false
+
         isInitialized = true
         updateSortedEstimates()
     }
@@ -102,6 +118,18 @@ final class EstimatesViewModel {
             creditorInfo = loadedCreditorInfo
         }
         appSettings = AppSettingsStorage.load()
+    }
+
+    private func debouncedSaveState() {
+        saveStateTask?.cancel()
+        saveStateTask = Task {
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            var settings = AppSettingsStorage.load()
+            settings.lastSelectedEstimateStates = selectedStates.map(\.rawValue)
+            AppSettingsStorage.save(settings)
+            appSettings = settings
+        }
     }
 
     // MARK: - Sorting & Filtering
@@ -120,6 +148,10 @@ final class EstimatesViewModel {
 
     private func updateSortedEstimates() {
         var filtered = estimates
+
+        if !selectedStates.isEmpty {
+            filtered = filtered.filter { selectedStates.contains($0.state) }
+        }
 
         if !searchText.isEmpty {
             filtered = filtered.filter {
@@ -151,7 +183,6 @@ final class EstimatesViewModel {
 
     private func performLoad() async {
         error = nil
-        let currentStateFilter = stateFilter
 
         #if DEBUG
         if appSettings.isDemoMode {
@@ -190,11 +221,10 @@ final class EstimatesViewModel {
 
             let fetched = try await apiService.fetchAllEstimates(
                 credentials: credentials,
-                state: currentStateFilter
+                state: nil
             )
 
             try Task.checkCancellation()
-            guard stateFilter == currentStateFilter else { return }
 
             estimates = fetched
             Analytics.estimatesLoaded(count: fetched.count)
@@ -224,13 +254,7 @@ final class EstimatesViewModel {
 
         do {
             let cached = try context.fetch(descriptor)
-            let filtered: [CachedEstimate]
-            if let stateFilter {
-                filtered = cached.filter { $0.stateRaw == stateFilter.rawValue }
-            } else {
-                filtered = cached
-            }
-            estimates = filtered.map { $0.toEstimate() }
+            estimates = cached.map { $0.toEstimate() }
         } catch {
             logger.warning("Failed to load estimate cache: \(error.localizedDescription)")
         }
@@ -264,14 +288,12 @@ final class EstimatesViewModel {
     }
 
     func switchFilterAndSelect(estimateId: Int, to newState: EstimateState) {
-        if let current = stateFilter, current != newState {
-            stateFilter = newState
+        // Keep the transitioned estimate visible when a state filter is active.
+        if !selectedStates.isEmpty {
+            selectedStates.insert(newState)
         }
-        loadTask?.cancel()
-        loadTask = Task {
-            await performLoad()
-            selectedEstimateIDs = [estimateId]
-        }
+        selectedEstimateIDs = [estimateId]
+        refreshEstimates(ids: [estimateId])
     }
 
     func refreshCurrentFilter() {
@@ -298,11 +320,9 @@ final class EstimatesViewModel {
         var updated = estimates
         for estimate in fetched {
             if let index = updated.firstIndex(where: { $0.id == estimate.id }) {
-                if let stateFilter, estimate.state != stateFilter {
-                    updated.remove(at: index)
-                } else {
-                    updated[index] = estimate
-                }
+                updated[index] = estimate
+            } else {
+                updated.append(estimate)
             }
         }
         estimates = updated

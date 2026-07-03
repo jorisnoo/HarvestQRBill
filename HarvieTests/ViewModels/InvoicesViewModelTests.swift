@@ -32,12 +32,12 @@ struct InvoicesViewModelTests {
         #expect(direction == .ascending)
     }
 
-    @Test("Default state filter is open")
+    @Test("Default selected state is open")
     @MainActor
     func defaultStateFilter() {
         let vm = InvoicesViewModel()
 
-        #expect(vm.stateFilter == .open)
+        #expect(vm.selectedStates == [.open])
     }
 
     @Test("Default sort option is issue date")
@@ -60,7 +60,7 @@ struct InvoicesViewModelTests {
     @MainActor
     func validSortOptionsForDraft() {
         let vm = InvoicesViewModel()
-        vm.stateFilter = .draft
+        vm.selectedStates = [.draft]
 
         #expect(vm.validSortOptions == [.issueDate])
     }
@@ -69,7 +69,7 @@ struct InvoicesViewModelTests {
     @MainActor
     func validSortOptionsForOpen() {
         let vm = InvoicesViewModel()
-        vm.stateFilter = .open
+        vm.selectedStates = [.open]
 
         #expect(vm.validSortOptions == [.issueDate, .dueDate])
     }
@@ -78,7 +78,7 @@ struct InvoicesViewModelTests {
     @MainActor
     func validSortOptionsForPaid() {
         let vm = InvoicesViewModel()
-        vm.stateFilter = .paid
+        vm.selectedStates = [.paid]
 
         #expect(vm.validSortOptions == InvoiceSortOption.allCases)
     }
@@ -123,5 +123,61 @@ struct InvoicesViewModelTests {
         vm.creditorInfo = .empty
 
         #expect(!vm.canExportWithQRBill)
+    }
+}
+
+@Suite("Estimates ViewModel")
+struct EstimatesViewModelTests {
+    @Test("Default selected state is sent")
+    @MainActor
+    func defaultSelectedState() {
+        let vm = EstimatesViewModel()
+
+        #expect(vm.selectedStates == [.sent])
+    }
+
+    @Test("Filters estimates by multiple selected states")
+    @MainActor
+    func multipleStateFiltering() {
+        let vm = EstimatesViewModel()
+        vm.selectedStates = [.sent, .accepted]
+        vm.estimates = [
+            estimate(id: 1, state: .draft),
+            estimate(id: 2, state: .sent),
+            estimate(id: 3, state: .accepted),
+            estimate(id: 4, state: .declined),
+        ]
+
+        #expect(Set(vm.sortedEstimates.map(\.state)) == [.sent, .accepted])
+    }
+
+    @Test("Empty selected states shows all estimates")
+    @MainActor
+    func allStateFiltering() {
+        let vm = EstimatesViewModel()
+        vm.selectedStates = []
+        vm.estimates = [
+            estimate(id: 1, state: .draft),
+            estimate(id: 2, state: .sent),
+            estimate(id: 3, state: .accepted),
+            estimate(id: 4, state: .declined),
+        ]
+
+        #expect(vm.sortedEstimates.count == EstimateState.allCases.count)
+    }
+
+    private static func estimate(id: Int, state: EstimateState) -> Estimate {
+        Estimate(
+            id: id,
+            clientKey: "client-\(id)",
+            number: "EST-\(id)",
+            amount: 100,
+            currency: "EUR",
+            state: state,
+            issueDate: Date(timeIntervalSince1970: TimeInterval(id)),
+            createdAt: .distantPast,
+            updatedAt: .distantPast,
+            client: ClientReference(id: id, name: "Client \(id)")
+        )
     }
 }
