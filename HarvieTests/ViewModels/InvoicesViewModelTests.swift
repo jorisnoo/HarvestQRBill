@@ -34,7 +34,7 @@ struct InvoicesViewModelTests {
 
     @Test("Default selected state is open")
     @MainActor
-    func defaultStateFilter() {
+    func defaultSelectedStates() {
         let vm = InvoicesViewModel()
 
         #expect(vm.selectedStates == [.open])
