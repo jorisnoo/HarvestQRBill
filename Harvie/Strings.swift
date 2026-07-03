@@ -57,7 +57,7 @@ enum Strings {
         static let statePaid = "Paid"
         static let stateDraft = "Draft"
         static let stateClosed = "Closed"
-        static let stateFilterHint = "Click to filter by state. \u{2318}-click to select several."
+        static let stateFilterHint = "Click to filter by state. Shift-click or \u{2318}-click to select several."
         static let exportingInvoices = "Exporting Invoices"
         static let creditorWarning = "Configure creditor info in Settings to enable QR bill export."
 

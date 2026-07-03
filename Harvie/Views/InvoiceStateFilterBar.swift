@@ -7,9 +7,9 @@ import SwiftUI
 
 /// Always-visible chip row for filtering invoices by one or more states.
 ///
-/// Plain click selects only that state (single-select). ⌘-click toggles a state
-/// in or out to build a combination (Finder selection semantics). "All" clears
-/// the filter (empty set == every state).
+/// Plain click selects only that state (single-select). ⌘-click or Shift-click
+/// toggles a state in or out to build a combination. "All" clears the filter
+/// (empty set == every state).
 struct InvoiceStateFilterBar: View {
     @Bindable var viewModel: InvoicesViewModel
 
@@ -41,7 +41,8 @@ struct InvoiceStateFilterBar: View {
     }
 
     private func select(_ state: InvoiceState) {
-        if NSEvent.modifierFlags.contains(.command) {
+        let modifiers = NSEvent.modifierFlags
+        if modifiers.contains(.command) || modifiers.contains(.shift) {
             if viewModel.selectedStates.contains(state) {
                 viewModel.selectedStates.remove(state)
             } else {
