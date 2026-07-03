@@ -30,100 +30,105 @@ struct InvoicesListView: View {
 
     @ViewBuilder
     private var invoicesList: some View {
-        List(selection: $viewModel.selectedInvoiceIDs) {
-            ForEach(viewModel.sortedInvoices) { invoice in
-                InvoiceRowView(
-                    invoice: invoice,
-                    sortOption: viewModel.sortOption
-                )
-                .tag(invoice.id)
-                // TODO: Re-enable drag-and-drop export once fully working
-                // .onDrag { viewModel.createDragProvider(for: invoice) }
+        VStack(spacing: 0) {
+            InvoiceStateFilterBar(viewModel: viewModel)
+
+            if !viewModel.canExportWithQRBill {
+                warningBanner
             }
-        }
-        .onKeyPress(.escape) {
-            guard !viewModel.selectedInvoiceIDs.isEmpty else { return .ignored }
-            viewModel.selectedInvoiceIDs.removeAll()
-            return .handled
-        }
-        .contextMenu(forSelectionType: Int.self) { selectedIDs in
-            if !selectedIDs.isEmpty {
-                if viewModel.allSelectedAreDrafts {
-                    Button {
-                        viewModel.initiateMarkAsSent()
-                    } label: {
-                        Label(Strings.InvoiceDetail.markAsSent, systemImage: "paperplane")
+
+            ScrollViewReader { proxy in
+                List(selection: $viewModel.selectedInvoiceIDs) {
+                    ForEach(viewModel.sortedInvoices) { invoice in
+                        InvoiceRowView(
+                            invoice: invoice,
+                            sortOption: viewModel.sortOption
+                        )
+                        .tag(invoice.id)
+                        // TODO: Re-enable drag-and-drop export once fully working
+                        // .onDrag { viewModel.createDragProvider(for: invoice) }
                     }
-                    .disabled(viewModel.isUpdating)
                 }
-
-                if viewModel.allSelectedAreOpen {
-                    Button {
-                        viewModel.initiateMarkAsPaid()
-                    } label: {
-                        Label(Strings.InvoiceDetail.markAsPaid, systemImage: "banknote")
-                    }
-                    .disabled(viewModel.isUpdating)
-
-                    Button {
-                        viewModel.showMarkAsDraftSheet = true
-                    } label: {
-                        Label(Strings.InvoiceDetail.markAsDraft, systemImage: "arrow.uturn.backward")
-                    }
-                    .disabled(viewModel.isUpdating)
+                .onKeyPress(.escape) {
+                    guard !viewModel.selectedInvoiceIDs.isEmpty else { return .ignored }
+                    viewModel.selectedInvoiceIDs.removeAll()
+                    return .handled
                 }
+                .contextMenu(forSelectionType: Int.self) { selectedIDs in
+                    if !selectedIDs.isEmpty {
+                        if viewModel.allSelectedAreDrafts {
+                            Button {
+                                viewModel.initiateMarkAsSent()
+                            } label: {
+                                Label(Strings.InvoiceDetail.markAsSent, systemImage: "paperplane")
+                            }
+                            .disabled(viewModel.isUpdating)
+                        }
 
-                if viewModel.allSelectedArePaid {
-                    Button {
-                        viewModel.showMarkAsOpenSheet = true
-                    } label: {
-                        Label(Strings.InvoiceDetail.markAsOpen, systemImage: "arrow.uturn.backward")
+                        if viewModel.allSelectedAreOpen {
+                            Button {
+                                viewModel.initiateMarkAsPaid()
+                            } label: {
+                                Label(Strings.InvoiceDetail.markAsPaid, systemImage: "banknote")
+                            }
+                            .disabled(viewModel.isUpdating)
+
+                            Button {
+                                viewModel.showMarkAsDraftSheet = true
+                            } label: {
+                                Label(Strings.InvoiceDetail.markAsDraft, systemImage: "arrow.uturn.backward")
+                            }
+                            .disabled(viewModel.isUpdating)
+                        }
+
+                        if viewModel.allSelectedArePaid {
+                            Button {
+                                viewModel.showMarkAsOpenSheet = true
+                            } label: {
+                                Label(Strings.InvoiceDetail.markAsOpen, systemImage: "arrow.uturn.backward")
+                            }
+                            .disabled(viewModel.isUpdating)
+                        }
+
+                        if viewModel.allSelectedAreDrafts || viewModel.allSelectedAreOpen {
+                            Button {
+                                viewModel.initiateChangeDate()
+                            } label: {
+                                Label(Strings.InvoiceDetail.changeDate, systemImage: "calendar")
+                            }
+                            .disabled(viewModel.isUpdating)
+                        }
+
+                        Divider()
+
+                        Button {
+                            Task {
+                                await viewModel.exportSelectedInvoices(withQRBill: true)
+                            }
+                        } label: {
+                            Label(Strings.InvoicesList.exportWithQRBill, systemImage: "square.and.arrow.down")
+                        }
+                        .disabled(!viewModel.canExportWithQRBill)
+
+                        Button {
+                            Task {
+                                await viewModel.exportSelectedInvoices(withQRBill: false)
+                            }
+                        } label: {
+                            Label(Strings.InvoicesList.exportWithoutQRBill, systemImage: "doc.text")
+                        }
                     }
-                    .disabled(viewModel.isUpdating)
+                } primaryAction: { selectedIDs in
+                    if let firstID = selectedIDs.first {
+                        viewModel.selectedInvoiceIDs = [firstID]
+                    }
                 }
-
-                if viewModel.allSelectedAreDrafts || viewModel.allSelectedAreOpen {
-                    Button {
-                        viewModel.initiateChangeDate()
-                    } label: {
-                        Label(Strings.InvoiceDetail.changeDate, systemImage: "calendar")
-                    }
-                    .disabled(viewModel.isUpdating)
-                }
-
-                Divider()
-
-                Button {
-                    Task {
-                        await viewModel.exportSelectedInvoices(withQRBill: true)
-                    }
-                } label: {
-                    Label(Strings.InvoicesList.exportWithQRBill, systemImage: "square.and.arrow.down")
-                }
-                .disabled(!viewModel.canExportWithQRBill)
-
-                Button {
-                    Task {
-                        await viewModel.exportSelectedInvoices(withQRBill: false)
-                    }
-                } label: {
-                    Label(Strings.InvoicesList.exportWithoutQRBill, systemImage: "doc.text")
+                .onChange(of: viewModel.selectedStates) {
+                    guard let firstInvoiceID = viewModel.sortedInvoices.first?.id else { return }
+                    proxy.scrollTo(firstInvoiceID, anchor: .top)
                 }
             }
-        } primaryAction: { selectedIDs in
-            if let firstID = selectedIDs.first {
-                viewModel.selectedInvoiceIDs = [firstID]
-            }
-        }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            VStack(spacing: 0) {
-                InvoiceStateFilterBar(viewModel: viewModel)
-                if !viewModel.canExportWithQRBill {
-                    warningBanner
-                }
-            }
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+
             SidebarStatusBar(invoices: viewModel.sortedInvoices)
         }
     }
