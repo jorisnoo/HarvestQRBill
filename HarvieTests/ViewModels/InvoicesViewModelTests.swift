@@ -32,12 +32,12 @@ struct InvoicesViewModelTests {
         #expect(direction == .ascending)
     }
 
-    @Test("Default state filter is open")
+    @Test("Default selected state is open")
     @MainActor
-    func defaultStateFilter() {
+    func defaultSelectedStates() {
         let vm = InvoicesViewModel()
 
-        #expect(vm.stateFilter == .open)
+        #expect(vm.selectedStates == [.open])
     }
 
     @Test("Default sort option is issue date")
@@ -60,7 +60,7 @@ struct InvoicesViewModelTests {
     @MainActor
     func validSortOptionsForDraft() {
         let vm = InvoicesViewModel()
-        vm.stateFilter = .draft
+        vm.selectedStates = [.draft]
 
         #expect(vm.validSortOptions == [.issueDate])
     }
@@ -69,7 +69,7 @@ struct InvoicesViewModelTests {
     @MainActor
     func validSortOptionsForOpen() {
         let vm = InvoicesViewModel()
-        vm.stateFilter = .open
+        vm.selectedStates = [.open]
 
         #expect(vm.validSortOptions == [.issueDate, .dueDate])
     }
@@ -78,7 +78,7 @@ struct InvoicesViewModelTests {
     @MainActor
     func validSortOptionsForPaid() {
         let vm = InvoicesViewModel()
-        vm.stateFilter = .paid
+        vm.selectedStates = [.paid]
 
         #expect(vm.validSortOptions == InvoiceSortOption.allCases)
     }
