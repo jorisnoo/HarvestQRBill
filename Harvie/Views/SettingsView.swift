@@ -41,6 +41,17 @@ struct SettingsView: View {
         .onChange(of: viewModel.creditorInfo) { viewModel.autoSave() }
         .onChange(of: viewModel.appSettings) { viewModel.autoSave() }
         .onDisappear { viewModel.saveImmediately() }
+        .alert(
+            Strings.Settings.saveFailedTitle,
+            isPresented: Binding(
+                get: { viewModel.saveError != nil },
+                set: { if !$0 { viewModel.saveError = nil } }
+            )
+        ) {
+            Button(Strings.Common.ok, role: .cancel) {}
+        } message: {
+            Text(viewModel.saveError ?? "")
+        }
     }
 }
 

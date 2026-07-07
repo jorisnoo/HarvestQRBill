@@ -56,13 +56,11 @@ enum CSVWriter {
         switch value {
         case let s as String:
             return s
-        case let b as Bool:
-            return b ? "true" : "false"
         case let n as NSNumber:
-            // NSNumber covers Int/Double/Bool — `Bool` already handled above.
-            // Distinguish integer vs floating point so integers don't get ".0".
-            if CFNumberIsFloatType(n) {
-                return n.stringValue
+            // `as? Bool` would also match NSNumbers holding exactly 0 or 1 (SE-0170
+            // bridging), so distinguish real JSON booleans by their CF type instead.
+            if CFGetTypeID(n) == CFBooleanGetTypeID() {
+                return n.boolValue ? "true" : "false"
             }
             return n.stringValue
         case is [Any], is [String: Any]:

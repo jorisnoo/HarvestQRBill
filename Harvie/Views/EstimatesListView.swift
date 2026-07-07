@@ -26,9 +26,14 @@ struct EstimatesListView: View {
                     viewModel.selectedEstimateIDs.removeAll()
                     return .handled
                 }
-                .contextMenu(forSelectionType: Int.self) { selectedIDs in
-                    if !selectedIDs.isEmpty {
+                .contextMenu(forSelectionType: Int.self) { clickedIDs in
+                    // Right-clicking a row outside the current selection passes only that
+                    // row's ID — build the menu from the clicked rows and sync the selection
+                    // in each action so the VM entry points target what was clicked.
+                    let targets = clickedIDs.compactMap { viewModel.estimatesById[$0] }
+                    if !targets.isEmpty {
                         Button {
+                            viewModel.selectedEstimateIDs = clickedIDs
                             Task { await viewModel.exportSelectedEstimates() }
                         } label: {
                             Label(Strings.EstimatesList.export, systemImage: "square.and.arrow.down")
@@ -36,29 +41,33 @@ struct EstimatesListView: View {
 
                         Divider()
 
-                        if viewModel.allSelectedAreDrafts {
+                        if targets.allSatisfy({ $0.state == .draft }) {
                             Button {
+                                viewModel.selectedEstimateIDs = clickedIDs
                                 Task { await viewModel.markSelectedAsSent() }
                             } label: {
                                 Label(Strings.EstimatesList.markAsSent, systemImage: "paperplane")
                             }
                         }
 
-                        if viewModel.allSelectedAreSent {
+                        if targets.allSatisfy({ $0.state == .sent }) {
                             Button {
+                                viewModel.selectedEstimateIDs = clickedIDs
                                 Task { await viewModel.markSelectedAsAccepted() }
                             } label: {
                                 Label(Strings.EstimatesList.markAsAccepted, systemImage: "checkmark.circle")
                             }
                             Button {
+                                viewModel.selectedEstimateIDs = clickedIDs
                                 Task { await viewModel.markSelectedAsDeclined() }
                             } label: {
                                 Label(Strings.EstimatesList.markAsDeclined, systemImage: "xmark.circle")
                             }
                         }
 
-                        if viewModel.allSelectedAreFinalized {
+                        if targets.allSatisfy({ $0.state == .accepted || $0.state == .declined }) {
                             Button {
+                                viewModel.selectedEstimateIDs = clickedIDs
                                 Task { await viewModel.reopenSelected() }
                             } label: {
                                 Label(Strings.EstimatesList.reopen, systemImage: "arrow.uturn.backward")

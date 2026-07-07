@@ -349,6 +349,7 @@ enum Strings {
         static let subdomain = "Subdomain"
         static let apiCredentialsHint = "Get your API credentials from Harvest Developer Tools."
         static let getApiKey = "Get an API key"
+        static let saveFailedTitle = "Couldn't Save Settings"
 
         // QR Bill
         static let creditorInformation = "Creditor Information"
@@ -577,6 +578,23 @@ enum Strings {
         static let invalidCurrency = "Currency must be CHF or EUR."
         static let invalidReference = "Invalid creditor reference format."
         static let messageTooLong = "Combined message and billing info must not exceed 140 characters."
+
+        // Keychain
+        static let keychainEncodingFailed = "Failed to prepare data for the keychain."
+        static let keychainDecodingFailed = "Failed to read data from the keychain."
+        static let keychainNotFound = "No saved data found in the keychain."
+
+        static func keychainSaveFailed(_ detail: String) -> String {
+            "Failed to save to the keychain: \(detail)"
+        }
+
+        static func keychainLoadFailed(_ detail: String) -> String {
+            "Failed to load from the keychain: \(detail)"
+        }
+
+        static func keychainDeleteFailed(_ detail: String) -> String {
+            "Failed to delete from the keychain: \(detail)"
+        }
     }
 
     // MARK: - Export

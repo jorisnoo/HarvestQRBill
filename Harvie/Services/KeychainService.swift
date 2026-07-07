@@ -20,13 +20,34 @@ actor KeychainService {
         case appSettings = "app_settings"
     }
 
-    enum KeychainError: Error {
+    enum KeychainError: Error, LocalizedError {
         case encodingFailed
         case decodingFailed
         case saveFailed(OSStatus)
         case loadFailed(OSStatus)
         case deleteFailed(OSStatus)
         case notFound
+
+        var errorDescription: String? {
+            switch self {
+            case .encodingFailed:
+                return Strings.Errors.keychainEncodingFailed
+            case .decodingFailed:
+                return Strings.Errors.keychainDecodingFailed
+            case .saveFailed(let status):
+                return Strings.Errors.keychainSaveFailed(Self.message(for: status))
+            case .loadFailed(let status):
+                return Strings.Errors.keychainLoadFailed(Self.message(for: status))
+            case .deleteFailed(let status):
+                return Strings.Errors.keychainDeleteFailed(Self.message(for: status))
+            case .notFound:
+                return Strings.Errors.keychainNotFound
+            }
+        }
+
+        private static func message(for status: OSStatus) -> String {
+            SecCopyErrorMessageString(status, nil) as String? ?? "code \(status)"
+        }
     }
 
     func save<T: Encodable>(_ value: T, for key: KeychainKey) throws {

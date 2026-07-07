@@ -113,7 +113,9 @@ final class ExportViewModel {
                 )
 
                 await MainActor.run {
-                    guard let self else { return }
+                    // A cancelled export finishes "normally" (the exporter records
+                    // per-resource cancellations) — don't report it as a success.
+                    guard let self, !Task.isCancelled else { return }
                     self.lastSummary = summary
                     self.progress = 1
                     self.progressMessage = Strings.DataExport.successSummary(
@@ -124,7 +126,7 @@ final class ExportViewModel {
                 }
             } catch {
                 await MainActor.run {
-                    guard let self else { return }
+                    guard let self, !Task.isCancelled else { return }
                     self.error = error.localizedDescription
                     self.isExporting = false
                 }

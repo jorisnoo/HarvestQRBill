@@ -13,9 +13,6 @@ actor HarvestAPIService {
 
     private let baseURL = URL(string: "https://api.harvestapp.com/v2")!
     private let session: URLSession
-    private let sessionDelegate = CertificatePinningDelegate(
-        pinnedDomains: ["harvestapp.com"]
-    )
     private let decoder: JSONDecoder
 
     private static nonisolated(unsafe) let iso8601Formatter: ISO8601DateFormatter = {
@@ -26,15 +23,18 @@ actor HarvestAPIService {
 
     private static nonisolated(unsafe) let dateOnlyFormatter: DateFormatter = {
         let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "yyyy-MM-dd"
-        f.timeZone = TimeZone(identifier: "UTC")
+        // Harvest date-only fields are calendar dates. Parse and format them in the
+        // user's timezone so they match what the user sees and picks — UTC shifted
+        // every date by a day for users west of UTC, and "today" near midnight.
         return f
     }()
 
     init() {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
-        session = URLSession(configuration: config, delegate: sessionDelegate, delegateQueue: nil)
+        session = URLSession(configuration: config)
 
         let iso = Self.iso8601Formatter
         let dateOnly = Self.dateOnlyFormatter

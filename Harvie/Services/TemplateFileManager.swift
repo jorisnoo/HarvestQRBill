@@ -51,7 +51,7 @@ enum TemplateFileManager {
         return try? String(contentsOf: url, encoding: .utf8)
     }
 
-    static func save(html: String, css: String, for id: UUID, name: String) {
+    static func save(html: String, css: String, for id: UUID, name: String) throws {
         let target = templateDirectory(for: id, name: name)
 
         // Rename existing folder if the name changed
@@ -65,6 +65,7 @@ enum TemplateFileManager {
             try css.write(to: target.appendingPathComponent("styles.css"), atomically: true, encoding: .utf8)
         } catch {
             logger.error("Failed to save template files for \(id): \(error.localizedDescription)")
+            throw error
         }
     }
 

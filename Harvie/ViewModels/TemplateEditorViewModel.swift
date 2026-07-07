@@ -32,6 +32,10 @@ final class TemplateEditorViewModel {
 
     @ObservationIgnored nonisolated(unsafe) private var renderTask: Task<Void, Never>?
     @ObservationIgnored private var fileWatcher: TemplateFileWatcher?
+    // Last content read from or written to disk; used to ignore watcher events
+    // caused by unrelated files in the template directory (e.g. render temp files).
+    @ObservationIgnored private var lastDiskHTML: String?
+    @ObservationIgnored private var lastDiskCSS: String?
     private let modelContext: ModelContext
 
     deinit {
@@ -49,6 +53,8 @@ final class TemplateEditorViewModel {
         self.template = template
         self.htmlContent = template.resolvedHTMLContent()
         self.cssContent = template.resolvedCSSContent()
+        self.lastDiskHTML = TemplateFileManager.loadHTML(for: template.id)
+        self.lastDiskCSS = TemplateFileManager.loadCSS(for: template.id)
         self.name = template.name
         self.columnVisibility = columnVisibility
         self.language = language
@@ -76,14 +82,27 @@ final class TemplateEditorViewModel {
         template.updatedAt = Date()
 
         if !template.isBuiltIn {
-            TemplateFileManager.save(html: htmlContent, css: cssContent, for: template.id, name: name)
-            // Clear SwiftData content — disk is source of truth
-            template.htmlContent = ""
-            template.cssContent = ""
+            do {
+                try TemplateFileManager.save(html: htmlContent, css: cssContent, for: template.id, name: name)
+                // Clear SwiftData content — disk is source of truth
+                template.htmlContent = ""
+                template.cssContent = ""
+                lastDiskHTML = htmlContent
+                lastDiskCSS = cssContent
+            } catch {
+                // Disk write failed: keep the content in SwiftData so it isn't lost,
+                // surface the error, and stay dirty so the user can retry.
+                template.htmlContent = htmlContent
+                template.cssContent = cssContent
+                try? modelContext.save()
+                self.error = error.localizedDescription
+                return
+            }
         }
 
         try? modelContext.save()
         isDirty = false
+        error = nil
 
         // Restart watcher since files may have been recreated
         startFileWatcher()
@@ -93,7 +112,7 @@ final class TemplateEditorViewModel {
         guard !template.isBuiltIn else { return }
         // Ensure files exist on disk before opening
         if !TemplateFileManager.filesExist(for: template.id) {
-            TemplateFileManager.save(html: htmlContent, css: cssContent, for: template.id, name: name)
+            try? TemplateFileManager.save(html: htmlContent, css: cssContent, for: template.id, name: name)
         }
         TemplateFileManager.openInEditor(for: template.id)
     }
@@ -101,7 +120,7 @@ final class TemplateEditorViewModel {
     func revealInFinder() {
         guard !template.isBuiltIn else { return }
         if !TemplateFileManager.filesExist(for: template.id) {
-            TemplateFileManager.save(html: htmlContent, css: cssContent, for: template.id, name: name)
+            try? TemplateFileManager.save(html: htmlContent, css: cssContent, for: template.id, name: name)
         }
         TemplateFileManager.revealInFinder(for: template.id)
     }
@@ -125,11 +144,20 @@ final class TemplateEditorViewModel {
 
     private func reloadFromDisk() {
         guard !template.isBuiltIn else { return }
-        if let html = TemplateFileManager.loadHTML(for: template.id) {
-            htmlContent = html
+        let diskHTML = TemplateFileManager.loadHTML(for: template.id)
+        let diskCSS = TemplateFileManager.loadCSS(for: template.id)
+
+        // Directory events also fire for unrelated files (e.g. transient render files);
+        // only reload — and discard unsaved edits — when the watched files actually changed.
+        guard diskHTML != lastDiskHTML || diskCSS != lastDiskCSS else { return }
+
+        if let diskHTML {
+            htmlContent = diskHTML
+            lastDiskHTML = diskHTML
         }
-        if let css = TemplateFileManager.loadCSS(for: template.id) {
-            cssContent = css
+        if let diskCSS {
+            cssContent = diskCSS
+            lastDiskCSS = diskCSS
         }
         isDirty = false
         updatePreview()

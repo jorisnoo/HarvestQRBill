@@ -8,7 +8,6 @@ import Foundation
 import os.log
 import PDFKit
 import SwiftData
-import UniformTypeIdentifiers
 
 private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "app.harvie", category: "InvoicesVM+Export")
 
@@ -163,83 +162,6 @@ extension InvoicesViewModel {
         return try? context.fetch(descriptor).first
     }
 
-    // MARK: - Drag & Drop
-    // TODO: Drag-and-drop export is temporarily disabled (see InvoicesListView)
-
-    func createDragProvider(for invoice: Invoice) -> NSItemProvider {
-        let provider = NSItemProvider()
-
-        let override = fetchClientOverride(for: invoice.client.id)
-        let resolvedSettings = appSettings.resolved(with: override)
-
-        let date: Date = switch sortOption {
-        case .issueDate, .dueDate:
-            invoice.issueDate
-        case .paidDate:
-            invoice.effectivePaidDate ?? invoice.issueDate
-        }
-
-        let fileName = resolvedSettings.generateFilename(
-            invoiceNumber: invoice.number,
-            creditorName: creditorInfo.name,
-            clientName: invoice.client.name,
-            date: date,
-            issueDate: invoice.issueDate,
-            dueDate: invoice.dueDate,
-            paidDate: invoice.effectivePaidDate
-        )
-
-        provider.suggestedName = (fileName as NSString).deletingPathExtension
-
-        let settings = resolvedSettings
-        let creditor = creditorInfo
-
-        provider.registerFileRepresentation(for: .pdf, visibility: .all) { completion in
-            Task { @MainActor [weak self] in
-                guard let self else {
-                    completion(nil, false, nil)
-                    return
-                }
-
-                do {
-                    let credentials = try await KeychainService.shared.loadHarvestCredentials()
-
-                    let template: InvoiceTemplate?
-                    if creditor.isValid && settings.effectivePDFSource == .template {
-                        guard let loaded = await self.resolveTemplate(for: settings) else {
-                            throw NSError(domain: "Harvie", code: 1, userInfo: [
-                                NSLocalizedDescriptionKey: Strings.Errors.noTemplateSelected
-                            ])
-                        }
-                        template = loaded
-                    } else {
-                        template = nil
-                    }
-
-                    let document = try await self.generatePDF(
-                        for: invoice,
-                        withQRBill: creditor.isValid,
-                        credentials: credentials,
-                        creditorInfo: creditor,
-                        template: template,
-                        settings: settings
-                    )
-
-                    let tempURL = FileManager.default.temporaryDirectory
-                        .appendingPathComponent(fileName)
-                    try await PDFService.shared.savePDF(document, to: tempURL)
-                    completion(tempURL, false, nil)
-                } catch {
-                    completion(nil, false, error)
-                }
-            }
-
-            return Progress()
-        }
-
-        return provider
-    }
-
     // MARK: - PDF Generation
 
     func generatePDF(
@@ -275,7 +197,11 @@ extension InvoicesViewModel {
             )
         }
 
-        let pdfURL = try HarvestAPIService.shared.buildPDFURL(for: invoice, subdomain: credentials.subdomain)
-        return try await PDFService.shared.downloadPDF(from: pdfURL)
+        return try await PDFService.shared.createInvoiceFromHarvest(
+            invoice: invoice,
+            credentials: credentials,
+            language: settings.templateLanguage,
+            paidMarkStyle: settings.paidMarkStyle
+        )
     }
 }

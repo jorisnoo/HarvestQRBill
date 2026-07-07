@@ -134,7 +134,22 @@ final class TemplatePDFService {
         """
     }
 
+    /// Renders run strictly one at a time: they share the single render window and,
+    /// per template, a fixed temp-file path, so overlapping renders would detach each
+    /// other's web view mid-render and clobber each other's temp file.
+    private var pendingRender: Task<PDFDocument, Error>?
+
     private func renderHTMLToPDF(_ html: String, baseURL: URL? = nil, rect: CGRect? = nil) async throws -> PDFDocument {
+        let previous = pendingRender
+        let render = Task {
+            _ = try? await previous?.value
+            return try await performRender(html, baseURL: baseURL, rect: rect)
+        }
+        pendingRender = render
+        return try await render.value
+    }
+
+    private func performRender(_ html: String, baseURL: URL? = nil, rect: CGRect? = nil) async throws -> PDFDocument {
         // When a baseURL is provided, write HTML to a temp file and use loadFileURL
         // so WKWebView's WebContent process can access local resources (images, etc.)
         var tempFileURL: URL?
@@ -171,36 +186,21 @@ final class TemplatePDFService {
 
         defer { renderWindow.contentView = nil }
 
-        return try await withThrowingTaskGroup(of: PDFDocument.self) { group in
-            group.addTask { @MainActor in
-                try await withCheckedThrowingContinuation { continuation in
-                    let delegate = PDFNavigationDelegate(webView: webView, rect: rect) { result in
-                        switch result {
-                        case .success(let document):
-                            continuation.resume(returning: document)
-                        case .failure(let error):
-                            continuation.resume(throwing: error)
-                        }
-                    }
-
-                    // Retain delegate via associated object — WKWebView.navigationDelegate is weak
-                    objc_setAssociatedObject(webView, "navDelegate", delegate, .OBJC_ASSOCIATION_RETAIN)
-                    webView.navigationDelegate = delegate
-                    if let tempFileURL, let baseURL {
-                        webView.loadFileURL(tempFileURL, allowingReadAccessTo: baseURL)
-                    } else {
-                        webView.loadHTMLString(html, baseURL: nil)
-                    }
-                }
+        return try await withCheckedThrowingContinuation { continuation in
+            let delegate = PDFNavigationDelegate(webView: webView, rect: rect) { result in
+                continuation.resume(with: result)
             }
 
-            group.addTask { @MainActor in
-                try await Task.sleep(for: .seconds(10))
-                throw PDFNavigationDelegate.PDFError.timeout
-            }
+            // Retain delegate via associated object — WKWebView.navigationDelegate is weak
+            objc_setAssociatedObject(webView, "navDelegate", delegate, .OBJC_ASSOCIATION_RETAIN)
+            webView.navigationDelegate = delegate
+            delegate.startTimeout(seconds: 10)
 
-            defer { group.cancelAll() }
-            return try await group.next()!
+            if let tempFileURL, let baseURL {
+                webView.loadFileURL(tempFileURL, allowingReadAccessTo: baseURL)
+            } else {
+                webView.loadHTMLString(html, baseURL: nil)
+            }
         }
     }
 }
@@ -223,7 +223,9 @@ private final class PDFNavigationDelegate: NSObject, WKNavigationDelegate {
         }
     }
 
-    private let webView: WKWebView
+    // weak: the web view retains this delegate via an associated object, so a
+    // strong reference back would create a retain cycle and leak both per render.
+    private weak var webView: WKWebView?
     private let rect: CGRect?
     private let completion: (Result<PDFDocument, Error>) -> Void
     private var hasCompleted = false
@@ -233,6 +235,18 @@ private final class PDFNavigationDelegate: NSObject, WKNavigationDelegate {
         self.rect = rect
         self.completion = completion
         super.init()
+    }
+
+    /// The continuation driving the render is resumed only by delegate callbacks,
+    /// so the timeout must fire through the same completion path.
+    func startTimeout(seconds: TimeInterval) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [weak self] in
+            guard let self, !self.hasCompleted else { return }
+            self.hasCompleted = true
+            self.webView?.stopLoading()
+            logger.error("PDF render timed out after \(seconds)s")
+            self.completion(.failure(PDFError.timeout))
+        }
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {

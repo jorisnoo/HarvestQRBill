@@ -45,8 +45,6 @@ struct InvoicesListView: View {
                             sortOption: viewModel.sortOption
                         )
                         .tag(invoice.id)
-                        // TODO: Re-enable drag-and-drop export once fully working
-                        // .onDrag { viewModel.createDragProvider(for: invoice) }
                     }
                 }
                 .onKeyPress(.escape) {
@@ -54,10 +52,18 @@ struct InvoicesListView: View {
                     viewModel.selectedInvoiceIDs.removeAll()
                     return .handled
                 }
-                .contextMenu(forSelectionType: Int.self) { selectedIDs in
-                    if !selectedIDs.isEmpty {
-                        if viewModel.allSelectedAreDrafts {
+                .contextMenu(forSelectionType: Int.self) { clickedIDs in
+                    // Right-clicking a row outside the current selection passes only that
+                    // row's ID — build the menu from the clicked rows and sync the selection
+                    // in each action so the VM entry points target what was clicked.
+                    let targets = clickedIDs.compactMap { viewModel.invoicesById[$0] }
+                    if !targets.isEmpty {
+                        let allDrafts = targets.allSatisfy { $0.state == .draft }
+                        let allOpen = targets.allSatisfy { $0.state == .open }
+
+                        if allDrafts {
                             Button {
+                                viewModel.selectedInvoiceIDs = clickedIDs
                                 viewModel.initiateMarkAsSent()
                             } label: {
                                 Label(Strings.InvoiceDetail.markAsSent, systemImage: "paperplane")
@@ -65,8 +71,9 @@ struct InvoicesListView: View {
                             .disabled(viewModel.isUpdating)
                         }
 
-                        if viewModel.allSelectedAreOpen {
+                        if allOpen {
                             Button {
+                                viewModel.selectedInvoiceIDs = clickedIDs
                                 viewModel.initiateMarkAsPaid()
                             } label: {
                                 Label(Strings.InvoiceDetail.markAsPaid, systemImage: "banknote")
@@ -74,6 +81,7 @@ struct InvoicesListView: View {
                             .disabled(viewModel.isUpdating)
 
                             Button {
+                                viewModel.selectedInvoiceIDs = clickedIDs
                                 viewModel.showMarkAsDraftSheet = true
                             } label: {
                                 Label(Strings.InvoiceDetail.markAsDraft, systemImage: "arrow.uturn.backward")
@@ -81,8 +89,9 @@ struct InvoicesListView: View {
                             .disabled(viewModel.isUpdating)
                         }
 
-                        if viewModel.allSelectedArePaid {
+                        if targets.allSatisfy({ $0.state == .paid }) {
                             Button {
+                                viewModel.selectedInvoiceIDs = clickedIDs
                                 viewModel.showMarkAsOpenSheet = true
                             } label: {
                                 Label(Strings.InvoiceDetail.markAsOpen, systemImage: "arrow.uturn.backward")
@@ -90,8 +99,9 @@ struct InvoicesListView: View {
                             .disabled(viewModel.isUpdating)
                         }
 
-                        if viewModel.allSelectedAreDrafts || viewModel.allSelectedAreOpen {
+                        if allDrafts || allOpen {
                             Button {
+                                viewModel.selectedInvoiceIDs = clickedIDs
                                 viewModel.initiateChangeDate()
                             } label: {
                                 Label(Strings.InvoiceDetail.changeDate, systemImage: "calendar")
@@ -102,6 +112,7 @@ struct InvoicesListView: View {
                         Divider()
 
                         Button {
+                            viewModel.selectedInvoiceIDs = clickedIDs
                             Task {
                                 await viewModel.exportSelectedInvoices(withQRBill: true)
                             }
@@ -111,6 +122,7 @@ struct InvoicesListView: View {
                         .disabled(!viewModel.canExportWithQRBill)
 
                         Button {
+                            viewModel.selectedInvoiceIDs = clickedIDs
                             Task {
                                 await viewModel.exportSelectedInvoices(withQRBill: false)
                             }
@@ -509,6 +521,7 @@ struct InvoiceRowView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(invoice.number)
                     .font(.headline)
+                    .lineLimit(1)
 
                 Text(invoice.client.name)
                     .font(.subheadline)

@@ -34,14 +34,11 @@ actor PDFService {
     }
 
     private let session: URLSession
-    private let sessionDelegate = CertificatePinningDelegate(
-        pinnedDomains: ["harvestapp.com"]
-    )
 
     init() {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 60
-        session = URLSession(configuration: config, delegate: sessionDelegate, delegateQueue: nil)
+        session = URLSession(configuration: config)
     }
 
     func downloadPDF(from url: URL) async throws -> PDFDocument {
@@ -219,6 +216,27 @@ actor PDFService {
             debtorAddress: debtorAddress, language: language,
             labelOverrides: labelOverrides, paidMarkStyle: paidMarkStyle
         )
+    }
+
+    /// Downloads the Harvest PDF without a QR bill, still applying the paid mark
+    /// (consistent with the template path when the QR bill is excluded).
+    func createInvoiceFromHarvest(
+        invoice: Invoice,
+        credentials: HarvestCredentials,
+        language: TemplateLanguage = .en,
+        paidMarkStyle: PaidMarkStyle = .default
+    ) async throws -> PDFDocument {
+        let pdfURL = try HarvestAPIService.shared.buildPDFURL(for: invoice, subdomain: credentials.subdomain)
+        let basePDF = try await downloadPDF(from: pdfURL)
+
+        try await renderAndApplyPaidMark(
+            to: basePDF,
+            invoice: invoice,
+            language: language,
+            paidMarkStyle: paidMarkStyle,
+            excludingLastPage: false
+        )
+        return basePDF
     }
 
     func createInvoiceFromTemplate(

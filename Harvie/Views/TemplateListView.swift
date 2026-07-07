@@ -172,7 +172,7 @@ struct TemplateListView: View {
 
             Button(Strings.Templates.openInExternalEditor) {
                 if !TemplateFileManager.filesExist(for: template.id) {
-                    TemplateFileManager.save(
+                    try? TemplateFileManager.save(
                         html: template.resolvedHTMLContent(),
                         css: template.resolvedCSSContent(),
                         for: template.id,
@@ -184,7 +184,7 @@ struct TemplateListView: View {
 
             Button(Strings.Templates.revealInFinder) {
                 if !TemplateFileManager.filesExist(for: template.id) {
-                    TemplateFileManager.save(
+                    try? TemplateFileManager.save(
                         html: template.resolvedHTMLContent(),
                         css: template.resolvedCSSContent(),
                         for: template.id,
@@ -209,13 +209,21 @@ struct TemplateListView: View {
 
         let template = InvoiceTemplate(
             name: Strings.Templates.untitledTemplate,
-            htmlContent: "",
-            cssContent: ""
+            htmlContent: html,
+            cssContent: css
         )
         modelContext.insert(template)
         try? modelContext.save()
 
-        TemplateFileManager.save(html: html, css: css, for: template.id, name: template.name)
+        do {
+            try TemplateFileManager.save(html: html, css: css, for: template.id, name: template.name)
+            // Clear SwiftData content — disk is source of truth
+            template.htmlContent = ""
+            template.cssContent = ""
+            try? modelContext.save()
+        } catch {
+            // Keep the content in SwiftData as fallback; migration retries the disk write.
+        }
 
         selectedTemplate = template
         openEditor(for: template)
@@ -230,11 +238,15 @@ struct TemplateListView: View {
         try? modelContext.save()
 
         if !copy.isBuiltIn {
-            TemplateFileManager.save(html: resolvedHTML, css: resolvedCSS, for: copy.id, name: copy.name)
-            // Clear SwiftData content — disk is source of truth
-            copy.htmlContent = ""
-            copy.cssContent = ""
-            try? modelContext.save()
+            do {
+                try TemplateFileManager.save(html: resolvedHTML, css: resolvedCSS, for: copy.id, name: copy.name)
+                // Clear SwiftData content — disk is source of truth
+                copy.htmlContent = ""
+                copy.cssContent = ""
+                try? modelContext.save()
+            } catch {
+                // Keep the content in SwiftData as fallback; migration retries the disk write.
+            }
         }
 
         selectedTemplate = copy
@@ -276,18 +288,26 @@ struct TemplateListView: View {
 
                 let template = InvoiceTemplate(
                     name: package.name,
-                    htmlContent: "",
-                    cssContent: ""
+                    htmlContent: package.html,
+                    cssContent: package.css
                 )
                 modelContext.insert(template)
                 try modelContext.save()
 
-                TemplateFileManager.save(
-                    html: package.html,
-                    css: package.css,
-                    for: template.id,
-                    name: template.name
-                )
+                do {
+                    try TemplateFileManager.save(
+                        html: package.html,
+                        css: package.css,
+                        for: template.id,
+                        name: template.name
+                    )
+                    // Clear SwiftData content — disk is source of truth
+                    template.htmlContent = ""
+                    template.cssContent = ""
+                    try? modelContext.save()
+                } catch {
+                    // Keep the content in SwiftData as fallback; migration retries the disk write.
+                }
 
                 selectedTemplate = template
             } catch {

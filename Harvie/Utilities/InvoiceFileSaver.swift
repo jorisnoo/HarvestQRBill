@@ -37,7 +37,7 @@ enum InvoiceFileSaver {
 
             var finalURL = fileURL
             var counter = 1
-            let baseName = fileName.replacingOccurrences(of: ".pdf", with: "")
+            let baseName = fileName.lowercased().hasSuffix(".pdf") ? String(fileName.dropLast(4)) : fileName
 
             while FileManager.default.fileExists(atPath: finalURL.path) {
                 let numberedName = "\(baseName)_\(counter).pdf"

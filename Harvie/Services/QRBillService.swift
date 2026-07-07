@@ -72,7 +72,10 @@ struct QRBillService {
             creditorAddress: creditorInfo.structuredAddress,
             amount: invoice.dueAmount,
             currency: currency,
-            debtorAddress: debtorAddress,
+            // The spec requires postal code and town when a debtor is present; an
+            // incomplete address (e.g. client fetch failed) would make scanners reject
+            // the code. Omit the debtor instead — the renderer draws the blank field.
+            debtorAddress: debtorAddress?.isValid == true ? debtorAddress : nil,
             reference: reference,
             unstructuredMessage: "\(language.resolvedQRBillLabels(overrides: labelOverrides).invoice) \(invoice.number)",
             billingInfo: nil

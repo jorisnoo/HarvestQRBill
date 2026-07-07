@@ -12,16 +12,18 @@ struct MultiSelectionView: View {
         viewModel.selectedInvoices
     }
 
-    private var totalAmount: Decimal {
-        selectedInvoices.reduce(0) { $0 + $1.displayAmount }
+    // Selections can mix currencies — show one total per currency instead of
+    // summing incomparable amounts into a single number.
+    private var formattedTotal: String {
+        Dictionary(grouping: selectedInvoices, by: \.currency)
+            .map { (currency: $0.key, total: $0.value.reduce(0) { $0 + $1.displayAmount }) }
+            .sorted { $0.currency < $1.currency }
+            .map { CurrencyFormatter.format($0.total, currency: $0.currency) }
+            .joined(separator: " · ")
     }
 
     private var uniqueClients: Int {
         Set(selectedInvoices.map { $0.client.id }).count
-    }
-
-    private var primaryCurrency: String {
-        selectedInvoices.first?.currency ?? "CHF"
     }
 
     var body: some View {
@@ -127,7 +129,7 @@ struct MultiSelectionView: View {
                 Text(Strings.MultiSelection.total)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text(CurrencyFormatter.format(totalAmount, currency: primaryCurrency))
+                Text(formattedTotal)
                     .font(.title3)
                     .fontWeight(.medium)
             }

@@ -35,6 +35,17 @@ struct IBANValidatorTests {
         #expect(!IBANValidator.validate(longIBAN))
     }
 
+    @Test("IBAN with separator characters fails validation")
+    func ibanWithSeparatorsFails() {
+        // Dashes must not be silently skipped by the mod-97 check
+        #expect(!IBANValidator.validate("CH93-0076-2011-6238-5295-7"))
+    }
+
+    @Test("IBAN with non-ASCII characters fails validation")
+    func ibanWithNonASCIIFails() {
+        #expect(!IBANValidator.validate("CH93 0076 2011 6238 5295 é"))
+    }
+
     @Test("Identifies Swiss IBANs")
     func identifiesSwissIBAN() {
         #expect(IBANValidator.isSwissIBAN("CH9300762011623852957"))

@@ -7,7 +7,7 @@ import SwiftUI
 
 struct LabelEditorSheet: View {
     @Binding var labelOverrides: [String: [String: String]]?
-    var baselineLabels: [String: [String: String]]? = nil
+    var baselineLabels: [String: [String: String]]?
     var keepsEmptyOverrides: Bool = false
     @State private var selectedLanguage: TemplateLanguage
     @Environment(\.dismiss) private var dismiss

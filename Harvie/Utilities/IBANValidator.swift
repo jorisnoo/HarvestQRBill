@@ -13,6 +13,12 @@ struct IBANValidator {
             return false
         }
 
+        // Mod97Calculator skips characters it doesn't recognize, so separators or
+        // junk (e.g. "CH93-0076-...") would otherwise pass the checksum unnoticed.
+        guard cleaned.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) else {
+            return false
+        }
+
         let countryCode = String(cleaned.prefix(2))
         guard countryCode.allSatisfy({ $0.isLetter }) else {
             return false

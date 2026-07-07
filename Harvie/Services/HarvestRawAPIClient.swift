@@ -17,9 +17,6 @@ actor HarvestRawAPIClient {
 
     private let baseURL = URL(string: "https://api.harvestapp.com/v2")!
     private let session: URLSession
-    private let sessionDelegate = CertificatePinningDelegate(
-        pinnedDomains: ["harvestapp.com"]
-    )
 
     enum RawAPIError: Error, LocalizedError {
         case invalidURL
@@ -44,7 +41,7 @@ actor HarvestRawAPIClient {
     init() {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 60
-        session = URLSession(configuration: config, delegate: sessionDelegate, delegateQueue: nil)
+        session = URLSession(configuration: config)
     }
 
     /// Fetches every page of a paginated list endpoint and returns the merged

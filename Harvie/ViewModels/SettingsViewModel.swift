@@ -26,6 +26,7 @@ final class SettingsViewModel {
 
     var isTestingConnection = false
     var connectionTestResult: ConnectionTestResult?
+    var saveError: String?
 
     enum ConnectionTestResult: Equatable {
         case success
@@ -76,6 +77,7 @@ final class SettingsViewModel {
 
             lastSavedCredentials = harvestCredentials
             lastSavedDemoMode = appSettings.isDemoMode
+            saveError = nil
 
             NotificationCenter.default.post(
                 name: Self.settingsSavedNotification,
@@ -84,6 +86,7 @@ final class SettingsViewModel {
             )
         } catch {
             logger.error("Failed to save settings: \(error.localizedDescription)")
+            saveError = error.localizedDescription
         }
     }
 

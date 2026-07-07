@@ -37,6 +37,13 @@ extension EstimatesViewModel {
             let credentials = try await KeychainService.shared.loadHarvestCredentials()
             let creditorInfo = try await KeychainService.shared.loadCreditorInfo()
 
+            // Template rendering shows creditor details on the document (same rule as invoices)
+            if appSettings.effectivePDFSource == .template, !creditorInfo.isValid {
+                exportError = Strings.Errors.configureCreditor
+                isExporting = false
+                return
+            }
+
             let total = toExport.count
             var overrideCache: [Int: ClientOverride?] = [:]
 

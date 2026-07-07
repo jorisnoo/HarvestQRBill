@@ -92,7 +92,7 @@ struct TemplateSeeder {
                 continue
             }
 
-            TemplateFileManager.save(html: html, css: css, for: UUID(), name: starter.name)
+            try? TemplateFileManager.save(html: html, css: css, for: UUID(), name: starter.name)
 
             #if DEBUG
             logger.debug("Seeded starter template '\(starter.name)'")
@@ -125,14 +125,19 @@ struct TemplateSeeder {
             let hasFiles = TemplateFileManager.filesExist(for: template.id)
 
             if hasContent && !hasFiles {
-                TemplateFileManager.save(
-                    html: template.htmlContent,
-                    css: template.cssContent,
-                    for: template.id,
-                    name: template.name
-                )
-                template.htmlContent = ""
-                template.cssContent = ""
+                do {
+                    try TemplateFileManager.save(
+                        html: template.htmlContent,
+                        css: template.cssContent,
+                        for: template.id,
+                        name: template.name
+                    )
+                    template.htmlContent = ""
+                    template.cssContent = ""
+                } catch {
+                    // Keep the content in SwiftData; migration retries on next launch.
+                    continue
+                }
 
                 #if DEBUG
                 logger.debug("Migrated user template '\(template.name)' to disk")
@@ -168,9 +173,12 @@ struct TemplateSeeder {
             #endif
         }
 
-        // Remove orphaned SwiftData entries whose folders no longer exist on disk
+        // Remove orphaned SwiftData entries whose folders no longer exist on disk.
+        // Entries that still carry content in SwiftData are pending disk migration
+        // (e.g. after a failed write), not orphaned — keep them.
         let discoveredIDs = Set(discovered.map(\.id))
         for template in existing where !discoveredIDs.contains(template.id) {
+            guard template.htmlContent.isEmpty && template.cssContent.isEmpty else { continue }
             context.delete(template)
 
             #if DEBUG

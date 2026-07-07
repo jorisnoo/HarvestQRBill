@@ -238,6 +238,10 @@ final class EstimatesViewModel {
             hasValidCredentials = false
             error = Strings.Errors.configureCredentials
         } catch {
+            // URLSession surfaces task cancellation as URLError(.cancelled), not
+            // CancellationError — a superseded load must not clobber its replacement's state.
+            guard !Task.isCancelled else { return }
+
             if estimates.isEmpty {
                 self.error = error.localizedDescription
             }
