@@ -230,7 +230,8 @@ actor PDFService {
         language: TemplateLanguage = .en,
         labelOverrides: [String: [String: String]]? = nil,
         paidMarkStyle: PaidMarkStyle = .default,
-        columnVisibility: ColumnVisibility = .default
+        columnVisibility: ColumnVisibility = .default,
+        includeQRBill: Bool = true
     ) async throws -> PDFDocument {
         // Fetch client once and reuse for both address and debtor
         var resolvedClientAddress = clientAddress
@@ -257,6 +258,17 @@ actor PDFService {
             context: context,
             columnVisibility: columnVisibility
         )
+
+        guard includeQRBill else {
+            try await renderAndApplyPaidMark(
+                to: basePDF,
+                invoice: invoice,
+                language: language,
+                paidMarkStyle: paidMarkStyle,
+                excludingLastPage: false
+            )
+            return basePDF
+        }
 
         // Build debtor address from already-fetched client
         let debtorAddress: StructuredAddress?

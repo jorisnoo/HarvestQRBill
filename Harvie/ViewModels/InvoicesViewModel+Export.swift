@@ -41,7 +41,8 @@ extension InvoicesViewModel {
             let credentials = try await KeychainService.shared.loadHarvestCredentials()
             let creditorInfo = try await KeychainService.shared.loadCreditorInfo()
 
-            if withQRBill, !creditorInfo.isValid {
+            let requiresCreditorInfo = withQRBill || appSettings.effectivePDFSource == .template
+            if requiresCreditorInfo, !creditorInfo.isValid {
                 exportError = Strings.Errors.configureCreditor
                 isExporting = false
                 return
@@ -62,7 +63,7 @@ extension InvoicesViewModel {
 
                 // Resolve template per-invoice (clients may have different settings)
                 var template: InvoiceTemplate?
-                if withQRBill && resolvedSettings.effectivePDFSource == .template {
+                if resolvedSettings.effectivePDFSource == .template {
                     guard let loaded = await resolveTemplate(for: resolvedSettings) else {
                         exportError = Strings.Errors.noTemplateSelected
                         isExporting = false
@@ -249,31 +250,32 @@ extension InvoicesViewModel {
         template: InvoiceTemplate?,
         settings: AppSettings
     ) async throws -> PDFDocument {
-        if withQRBill {
-            if let template {
-                return try await PDFService.shared.createInvoiceFromTemplate(
-                    invoice: invoice,
-                    template: template,
-                    creditorInfo: creditorInfo,
-                    credentials: credentials,
-                    language: settings.templateLanguage,
-                    labelOverrides: settings.labelOverrides,
-                    paidMarkStyle: settings.paidMarkStyle,
-                    columnVisibility: settings.columnVisibility
-                )
-            } else {
-                return try await PDFService.shared.createInvoiceWithQRBill(
-                    invoice: invoice,
-                    credentials: credentials,
-                    creditorInfo: creditorInfo,
-                    language: settings.templateLanguage,
-                    labelOverrides: settings.labelOverrides,
-                    paidMarkStyle: settings.paidMarkStyle
-                )
-            }
-        } else {
-            let pdfURL = try HarvestAPIService.shared.buildPDFURL(for: invoice, subdomain: credentials.subdomain)
-            return try await PDFService.shared.downloadPDF(from: pdfURL)
+        if let template {
+            return try await PDFService.shared.createInvoiceFromTemplate(
+                invoice: invoice,
+                template: template,
+                creditorInfo: creditorInfo,
+                credentials: credentials,
+                language: settings.templateLanguage,
+                labelOverrides: settings.labelOverrides,
+                paidMarkStyle: settings.paidMarkStyle,
+                columnVisibility: settings.columnVisibility,
+                includeQRBill: withQRBill
+            )
         }
+
+        if withQRBill {
+            return try await PDFService.shared.createInvoiceWithQRBill(
+                invoice: invoice,
+                credentials: credentials,
+                creditorInfo: creditorInfo,
+                language: settings.templateLanguage,
+                labelOverrides: settings.labelOverrides,
+                paidMarkStyle: settings.paidMarkStyle
+            )
+        }
+
+        let pdfURL = try HarvestAPIService.shared.buildPDFURL(for: invoice, subdomain: credentials.subdomain)
+        return try await PDFService.shared.downloadPDF(from: pdfURL)
     }
 }
