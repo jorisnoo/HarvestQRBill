@@ -234,7 +234,7 @@ enum Strings {
         static let stateDraft = "Draft"
         static let stateSent = "Sent"
         static let stateAccepted = "Accepted"
-        static let stateDeclined = "Declined"
+        static let stateDeclined = "Decl."
         static let all = "All"
         static let stateFilterHint = "Click to filter by state. Shift-click or \u{2318}-click to select several."
         static let exportingEstimates = "Exporting Estimates"
