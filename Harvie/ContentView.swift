@@ -68,14 +68,16 @@ struct ContentView: View {
         }
         .toolbar {
             if columnVisibility != .detailOnly {
-                ToolbarItemGroup(placement: .automatic) {
-                    sortFilterMenu
+                ToolbarItem(placement: .automatic) {
+                    HStack(spacing: 6) {
+                        if let activeFilterLabel {
+                            Text(activeFilterLabel)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .fixedSize()
+                        }
 
-                    if let activeFilterLabel {
-                        Text(activeFilterLabel)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .fixedSize()
+                        sortFilterMenu
                     }
                 }
             }
