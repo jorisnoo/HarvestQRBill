@@ -68,8 +68,15 @@ struct ContentView: View {
         }
         .toolbar {
             if columnVisibility != .detailOnly {
-                ToolbarItem(placement: .automatic) {
+                ToolbarItemGroup(placement: .automatic) {
                     sortFilterMenu
+
+                    if let activeFilterLabel {
+                        Text(activeFilterLabel)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
                 }
             }
         }
@@ -92,16 +99,16 @@ struct ContentView: View {
                 sortFilterMenuItems
             }
         } label: {
-            Label(sortFilterMenuLabel, systemImage: "line.3.horizontal.decrease.circle")
+            Label(Strings.InvoicesList.sortAndFilter, systemImage: "line.3.horizontal.decrease.circle")
         }
         .focusable(false)
     }
 
-    private var sortFilterMenuLabel: String {
+    private var activeFilterLabel: String? {
         if source.wrappedValue == .invoices, let period = invoicesVM.selectedPeriod {
             return invoicesVM.formatPeriod(period)
         }
-        return Strings.InvoicesList.sortAndFilter
+        return nil
     }
 
     @ViewBuilder
