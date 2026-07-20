@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.2](https://github.com/jorisnoo/Harvie/releases/tag/v0.8.2) (2026-07-20)
+
+### Features
+
+- **export:** make QR bill optional in invoice exports ([69b41b2](https://github.com/jorisnoo/Harvie/commit/69b41b251d567ee329de7244951a20965c4e63ee))
+
+### Code Refactoring
+
+- **services:** remove certificate pinning and fix PDF render sequencing ([358978a](https://github.com/jorisnoo/Harvie/commit/358978a4063eda107d019e232f42b4a97fae735a))
+
+### Chores
+
+- update Aptabase host endpoint to harvie.app ([ebd9f47](https://github.com/jorisnoo/Harvie/commit/ebd9f47a5c0db521e7905be26b5e0c102a7a75fc))
 ## [0.8.1](https://github.com/jorisnoo/Harvie/releases/tag/v0.8.1) (2026-07-03)
 
 ### Features
