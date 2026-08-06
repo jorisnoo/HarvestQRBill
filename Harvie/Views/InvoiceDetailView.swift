@@ -149,7 +149,6 @@ struct InvoiceDetailView: View {
                     lineItemsSection(lineItems)
                 }
 
-                datesSection
                 notesSection
             }
             .padding()
@@ -541,6 +540,12 @@ struct InvoiceDetailView: View {
                     if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
                 }
 
+            if let paidAt = invoice.paidAt {
+                Text(Strings.InvoiceDetail.paid(paidAt.formatted(date: .long, time: .shortened)))
+                    .font(.subheadline)
+                    .foregroundStyle(.green)
+            }
+
             if let tax = invoice.tax, invoice.taxAmount != nil {
                 Text(Strings.InvoiceDetail.inclTax(tax.formatted(), CurrencyFormatter.format(liveTaxAmount, currency: invoice.currency)))
                     .font(.caption)
@@ -554,16 +559,6 @@ struct InvoiceDetailView: View {
                     .font(.caption)
                     .contentTransition(.numericText())
                     .animation(.default, value: liveAmount)
-            }
-        }
-    }
-
-    private var datesSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            if let paidAt = invoice.paidAt {
-                Text(Strings.InvoiceDetail.paid(paidAt.formatted(date: .long, time: .shortened)))
-                    .font(.subheadline)
-                    .foregroundStyle(.green)
             }
         }
     }
